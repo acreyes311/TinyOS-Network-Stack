@@ -18,6 +18,10 @@ implementation {
     components Node;
     components new AMReceiverC(AM_PACK) as GeneralReceive;
 
+    components new TimerMilliC() as myTimerC;   // create a new timer named myTimerC
+    //App.Boot -> MainC.boot
+    //App.periodicTimer -> myTimerC;    //Wire interface to component
+
     Node -> MainC.Boot;
 
     Node.Receive -> GeneralReceive;
@@ -30,4 +34,8 @@ implementation {
 
     components CommandHandlerC;
     Node.CommandHandler -> CommandHandlerC;
+
+
+    // Add component Lists ( packetlist, neighborlists)
+
 }
