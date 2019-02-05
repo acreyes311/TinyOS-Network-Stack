@@ -26,25 +26,34 @@ module Node{
    //Added Modules
    uses interface Timer<TMilli> as periodicTimer;	// Interface wired in NodeC.nc
    uses interface Random as Random;	//used to avoid timer interruption/congestion
+
    // Will need List of packets and Neighbors 
+   use interface List<pack> as Packets;
 }
 
 implementation{
    pack sendPackage;
 
    // Prototypes
+
+   bool isKnown(pack *P);	// already seen function
+
+
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
+
    event void Boot.booted(){
-      call AMControl.start();
+   	  uint32_t start;
+   	  uint32_t end;
+      call AMControl.start();  
+     
+      dbg(GENERAL_CHANNEL, "Booted\n");
+
+      start = call Random.rand32() % 2000;	// random up to 2000 ms
+      end = call Random.rand32() % 10000 + 2000;  // 10000-12000 ms
 
       // Call to timer fired event
-      call periodicTimer.startPeriodic(100);	//starts timer to run every 100 ms
-
-      // Implement Random interface to avoid timers interrupting eachother
-
-
-      dbg(GENERAL_CHANNEL, "Booted\n");
+      call periodicTimer.startPeriodic(start,end);	//starts timer
    }
 
    //PeriodicTimer Event implementation
@@ -68,6 +77,15 @@ implementation{
       dbg(GENERAL_CHANNEL, "Packet Received\n");
       if(len==sizeof(pack)){
          pack* myMsg=(pack*) payload;	// Message of received package
+         ///////////////////
+         if((myMsg->TTL == 0 || isKnown(myMsg)){	// call to isKnown()
+         // Do nothing if expired or seen
+
+         }	
+
+
+         ///////////////////
+
          dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
          return msg;
       }
@@ -106,5 +124,22 @@ implementation{
       Package->seq = seq;
       Package->protocol = protocol;
       memcpy(Package->payload, payload, length);
+   }
+
+   /*
+   	isKnown bool function check to see if packet is in list of sent/received(seen) packets
+   */
+   bool isKnown(pack *P) {
+   		uint16_t size = call Packets.size(); // size of our packet list
+   		pack temp;
+
+   		for(int i = 0; i < size; i++) {
+   			temp = call Packets.get(i);	// set temp to indexed packet in packet list
+   			// Checks for same source destination and sequence #
+   			if ((temp.src == P->src) && (temp.dest == P->dest) && (temp.seq == P->seq))
+   				return TRUE;
+   		}
+   		return FALSE;		
+   	}
    }
 }
