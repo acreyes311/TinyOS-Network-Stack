@@ -28,7 +28,7 @@ module Node{
    uses interface Random as Random;	//used to avoid timer interruption/congestion
 
    // Will need List of packets and Neighbors 
-   use interface List<pack> as Packets;
+   uses interface List<pack> as Packets;
 }
 
 implementation{
