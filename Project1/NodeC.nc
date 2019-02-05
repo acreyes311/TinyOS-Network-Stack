@@ -21,7 +21,8 @@ implementation {
     components new TimerMilliC() as myTimerC;   // create a new timer named myTimerC
     //App.Boot -> MainC.boot
     //App.periodicTimer -> myTimerC;    //Wire interface to component
-
+    Node.periodicTimer -> myTimerC;    //Wire interface to component
+    
     Node -> MainC.Boot;
 
     Node.Receive -> GeneralReceive;
