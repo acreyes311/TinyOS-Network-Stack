@@ -29,15 +29,25 @@ module Node{
 
    // Will need List of packets and Neighbors 
    uses interface List<pack> as Packets;
+   uses interface List<Neighbor *> as Neighbors;
 }
+
+// Neighbor struct for node ID and number of hops/ping
+typedef nx_struct Neighbor{
+   nx_uint16_t nodeID;
+   nx_uint16_t hops;
+}Neighbor;
 
 implementation{
    pack sendPackage;
+   uint16_t seqNumber = 0; 
 
    // Prototypes
 
    bool isKnown(pack *P);	// already seen function
 
+   void pushPack(pack p); // push into list
+   void neighborList(); // neighbor list
 
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
@@ -54,12 +64,17 @@ implementation{
 
       // Call to timer fired event
       call periodicTimer.startPeriodic(start,end);	//starts timer
+      // Or just
+     // call periodicTimer.startPeriodic(1000); //1000 ms
+     dbg(NEIGHBOR_CHANNEL, "START TIMER");
    }
 
    //PeriodicTimer Event implementation
    event void periodicTimer.fired {
    	  // neighbor discovery function call or implement discovery here
-
+        dbg(NEIGHBOR_CHANNEL, "Call to neighborList()");
+        neighborList();
+        
    }
 
    event void AMControl.startDone(error_t err){
@@ -77,11 +92,43 @@ implementation{
       dbg(GENERAL_CHANNEL, "Packet Received\n");
       if(len==sizeof(pack)){
          pack* myMsg=(pack*) payload;	// Message of received package
-         ///////////////////
-         if((myMsg->TTL == 0 || isKnown(myMsg)){	// call to isKnown()
-         // Do nothing if expired or seen
+         dbg(GENERAL_CHANNEL, "Package  received from : %s\n", myMsg->src);
+         dbg(FLOODING_CHANNEL,"Packet being flooded to %d\n", myMsg->dest);
 
-         }	
+         ///////////////////
+         if((myMsg->TTL == 0 || isKnown(myMsg)){	// call to isKnown();  Can seperate into 2 if else statements
+         // Drop packet if expired or seen
+         dbg(FLOODING_CHANNEL,"PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
+         }
+
+
+         
+         if(myMsg->dest == TOS_NODE_ID) {
+            dbg(FLOODING_CHANNEL,"Packet #%d arrived from %d with payload: %s\n", myMsg->seq, myMsg->src, myMsg->payload);
+            // dont push PROTOCOL_CMD into list, will not allow same node to send multiple pings
+
+            if(myMsg->protocol != PROTOCOL_CMD) {
+               pushPack(*myMsg); // push non protol_cmd into packet list
+            }
+
+            /////BEGIN CHECKING PROTOCOLS////
+
+            // PROTOCOL_PING: packet was pinged but no reply
+            if(myMsg->protocol == PROTOCOL_PING) {
+               dbg(FLOODING_CHANNEL,"Ping replying to %d\n", myMsg->src);
+               //makepack with myMsg->src as destination
+               // Two ways.
+               makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, sendPackage.seq+1,(uint8_t *)myMsg->payload, sizeof(myMsg->payload));               
+               //makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, seqNumber, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
+               seqNumber++;   // increase sequence id number
+               // Push into seen/sent package list
+               pushPack(sendPackage);
+               // Send new packet
+               call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+               
+            }	
+
+         }
 
 
          ///////////////////
