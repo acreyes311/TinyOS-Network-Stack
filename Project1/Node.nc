@@ -124,8 +124,16 @@ implementation{
                // Push into seen/sent package list
                pushPack(sendPackage);
                // Send new packet
-               call Sender.send(sendPackage, AM_BROADCAST_ADDR);
-               
+               call Sender.send(sendPackage, AM_BROADCAST_ADDR);               
+            }
+
+            // PROTOCOL PINGREPLY: Packet at correct destination; Stop sending packet
+            else if(myMsg->protocol == PROTOCOL_PINGREPLY) {
+               dbg(FLOODING_CHANNEL, "PING REPLY RECEIVED FROM %d\n ",myMsg->src);
+            }
+            // ELSE packet does not belong to current node, flood packet
+            else {
+
             }	
 
          }
@@ -143,6 +151,7 @@ implementation{
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
+      sendPackage.seq = sendPackage.seq + 1;
       makePack(&sendPackage, TOS_NODE_ID, destination, 0, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
       call Sender.send(sendPackage, AM_BROADCAST_ADDR); 
       //destination);
