@@ -15,6 +15,7 @@
  * Implement Neighbor discovery
  * Add isFull() to List.nc/ListC.nc
  * Figure out  DroppedNeighbors/poolofneighbors
+ * For Random.rand32: it should include in both interface in Node.nc and component in NocdeC.nc.
  * Try to restructure more stuff *_* 
 */
 
