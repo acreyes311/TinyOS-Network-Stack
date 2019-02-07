@@ -25,6 +25,13 @@
 #include "includes/sendInfo.h"
 #include "includes/channels.h"
 
+
+typedef nx_struct Neighbor{
+   nx_uint16_t nodeID;
+   nx_uint16_t hops;
+}Neighbor;
+
+
 module Node{
    uses interface Boot;
 
@@ -36,20 +43,16 @@ module Node{
    uses interface CommandHandler;
 
    //Added Modules
-   uses interface Timer<TMilli> as periodicTimer;	// Interface wired in NodeC.nc
-   uses interface Random as Random;	//used to avoid timer interruption/congestion
+   uses interface Timer<TMilli> as periodicTimer;  // Interface wired in NodeC.nc
+   uses interface Random as Random; //used to avoid timer interruption/congestion
 
    // Will need List of packets and Neighbors 
    uses interface List<pack> as Packets;  // List of Packets
-   uses interface List<Neighbor *> as Neighbors;   // List of Known Neighbors
-   uses interface List<Neighbor *> as DroppedNeighbors;  // List of Neighbors dropped out of network
+   uses interface List<Neighbor* > as Neighbors;   // List of Known Neighbors
+   uses interface List<Neighbor* > as DroppedNeighbors;  // List of Neighbors dropped out of network
 }
 
 // Neighbor struct for node ID and number of hops/ping
-typedef nx_struct Neighbor{
-   nx_uint16_t nodeID;
-   nx_uint16_t hops;
-}Neighbor;
 
 implementation{
    pack sendPackage;
@@ -57,10 +60,10 @@ implementation{
 
    // Prototypes
 
-   bool isKnown(pack *P);	// already seen function
+   bool isKnown(pack *p);  // already seen function
    void insertPack(pack p); // push into list
    void neighborList(); // neighbor list
-
+   
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
    // insertPack checks to see if list is full if not insert pack at back of list
@@ -75,25 +78,46 @@ implementation{
    }
 
    event void Boot.booted(){
-   	  uint32_t start;
-   	  uint32_t end;
+        //uint32_t start;
+       // uint32_t end;
       call AMControl.start();  
      
       dbg(GENERAL_CHANNEL, "Booted\n");
 
-      start = call Random.rand32() % 2000;	// random up to 2000 ms
-      end = call Random.rand32() % 10000 + 2000;  // 10000-12000 ms
-
+      //start = call Random.rand32() % 2000;   // random up to 2000 ms
+    //  end = call Random.rand32() % 10000 + 2000;  // 10000-12000 ms
       // Call to timer fired event
-      call periodicTimer.startPeriodic(start,end);	//starts timer
+      //call periodicTimer.startPeriodicAt(start,end); //starts timer // from start to end
       // Or just
      // call periodicTimer.startPeriodic(1000); //1000 ms
-     dbg(NEIGHBOR_CHANNEL, "START TIMER");
+   //  dbg(NEIGHBOR_CHANNEL, "START TIMER");
+   }
+
+   void neighborList(){
+       pack Package;
+      char* message;
+      if(!call Neighbors.isEmpty()){
+         uint16_t size = call Neighbors.size();
+         uint16_t i= 0;
+          uint16_t j= 0;
+         Neighbor* line;
+         for(i =0; i< size; i++){
+            line = call Neighbors.get(i);
+           dbg(NEIGHBOR_CHANNEL, "Neighbors Node: %d/n", line);
+           line->hops++;
+           j= line->hops;
+         }
+      }
+      else{
+         dbg(NEIGHBOR_CHANNEL, "Neighbors Node: %d/n", TOS_NODE_ID);
+      }
+
+
    }
 
    //PeriodicTimer Event implementation
-   event void periodicTimer.fired {
-   	  // neighbor discovery function call or implement discovery here
+   event void periodicTimer.fired() {
+        // neighbor discovery function call or implement discovery here
         dbg(NEIGHBOR_CHANNEL, "Call to neighborList()");
         neighborList();
         
@@ -110,7 +134,8 @@ implementation{
 
    event void AMControl.stopDone(error_t err){}
 
-   event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
+   event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len)
+   {
       bool flag;
       uint16_t size;
       uint16_t i = 0;
@@ -118,28 +143,29 @@ implementation{
       Neighbor *TempNeighbor;
 
       dbg(GENERAL_CHANNEL, "Packet Received\n");
-      if(len==sizeof(pack)){
-         pack* myMsg=(pack*) payload;	// Message of received package
+      if(len==sizeof(pack))
+      {
+         pack* myMsg=(pack*) payload;  // Message of received package
          dbg(GENERAL_CHANNEL, "Package  received from : %s\n", myMsg->src);
          dbg(FLOODING_CHANNEL,"Packet being flooded to %d\n", myMsg->dest);
 
          ///////////////////
-         //if((myMsg->TTL == 0 || isKnown(myMsg)){	// call to isKnown();  Can seperate into 2 if else statements
+         //if((myMsg->TTL == 0 || isKnown(myMsg)){ // call to isKnown();  Can seperate into 2 if else statements
          if(myMsg->TTL == 0) {
          // Drop packet if expired or seen
             dbg(FLOODING_CHANNEL,"TTL = 0, PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
          }
-         if(myMsg->isKnown(myMsg)) {
-            dbg(FLOODING_CHANNEL,"Already seen PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
-         }
-
-         
-         if(myMsg->dest == TOS_NODE_ID) {
+         //if(myMsg-> isKnown(myMsg)) {
+           // dbg(FLOODING_CHANNEL,"Already seen PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
+         //}
+      
+         if(myMsg->dest == TOS_NODE_ID) 
+         {
             dbg(FLOODING_CHANNEL,"Packet #%d arrived from %d with payload: %s\n", myMsg->seq, myMsg->src, myMsg->payload);
             // dont push PROTOCOL_CMD into list, will not allow same node to send multiple pings
 
             if(myMsg->protocol != PROTOCOL_CMD) {
-               pushPack(*myMsg); // push non protol_cmd into packet list
+               insertPack(*myMsg); // push non protol_cmd into packet list
             }
 
             /////BEGIN CHECKING FLOODING PROTOCOLS////
@@ -153,7 +179,7 @@ implementation{
                //makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, seqNumber, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
                seqNumber++;   // increase sequence id number
                // Push into seen/sent package list
-               pushPack(sendPackage);
+               insertPack(sendPackage);
                // Send new packet
                call Sender.send(sendPackage, AM_BROADCAST_ADDR);               
             }
@@ -173,9 +199,9 @@ implementation{
                insertPack(sendPackage);   // Packet to be inserted into seen packet list
 
                call Sender.send(sendPackage, AM_BROADCAST_ADDR);  // Resend packet
-            }	
-
+            }  
          }
+         
          // Neighbor Discovery
          // Packets receive a packet from broadcast address
          // Check to see if packet searching for neighbors
@@ -242,9 +268,8 @@ implementation{
                //makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
                dbg(FLOODING_CHANNEL, "Packet from %d, intended for %d is being Rebroadcasted./n", myMsg->src, myMsg->dest);
                insertPack(sendPackage);   // Packet to be inserted into seen packet list
-
                call Sender.send(sendPackage, AM_BROADCAST_ADDR);  // Resend packet
-            }	
+            }  
          */
          ///////////////////
 
@@ -259,9 +284,10 @@ implementation{
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
-      sendPackage.seq = sendPackage.seq + 1;
-      makePack(&sendPackage, TOS_NODE_ID, destination, 0, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
+      //sendPackage.seq = sendPackage.seq + 1;
+      makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, seqNumber, payload, PACKET_MAX_PAYLOAD_SIZE);
       call Sender.send(sendPackage, AM_BROADCAST_ADDR); 
+      seqNumber = seqNumber + 1;
       //destination);
    }
 
@@ -291,19 +317,18 @@ implementation{
    }
 
    /*
-   	isKnown bool function check to see if packet is in list of sent/received(seen) packets
+      isKnown bool function check to see if packet is in list of sent/received(seen) packets
    */
-   bool isKnown(pack *P) {
-   		uint16_t size = call Packets.size(); // size of our packet list
-   		pack temp;
-
-   		for(int i = 0; i < size; i++) {
-   			temp = call Packets.get(i);	// set temp to indexed packet in packet list
-   			// Checks for same source destination and sequence #
-   			if ((temp.src == P->src) && (temp.dest == P->dest) && (temp.seq == P->seq))
-   				return TRUE;
-   		}
-   		return FALSE;		
-   	}
-   }
+   bool isKnown(pack *p) {
+         uint16_t size = call Packets.size(); // size of our packet list
+         pack temp;
+         uint16_t i =0;
+         for(i = 0; i < size; i++) {
+            temp = call Packets.get(i);   // set temp to indexed packet in packet list
+            // Checks for same source destination and sequence #
+            if ((temp.src == p->src) && (temp.dest == p->dest) && (temp.seq == p->seq))
+               return TRUE;
+         }
+         return FALSE;     
+      }
 }
