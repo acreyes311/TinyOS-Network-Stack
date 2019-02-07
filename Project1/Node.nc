@@ -45,12 +45,21 @@ implementation{
    // Prototypes
 
    bool isKnown(pack *P);	// already seen function
-
-   void pushPack(pack p); // push into list
+   void insertPack(pack p); // push into list
    void neighborList(); // neighbor list
 
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
+   // insertPack checks to see if list is full if not insert pack at back of list
+   // implement isFull in dataStructures/interfaces List.nc/ListC.nc
+   void insertPack(pack p) {
+      if (call Packets.isFull()) {
+         call Packets.popfront();
+      }
+      else {
+         call Packets.pushback(p);  // insert at back of list
+      }
+   }
 
    event void Boot.booted(){
    	  uint32_t start;
@@ -96,11 +105,14 @@ implementation{
          dbg(FLOODING_CHANNEL,"Packet being flooded to %d\n", myMsg->dest);
 
          ///////////////////
-         if((myMsg->TTL == 0 || isKnown(myMsg)){	// call to isKnown();  Can seperate into 2 if else statements
+         //if((myMsg->TTL == 0 || isKnown(myMsg)){	// call to isKnown();  Can seperate into 2 if else statements
+         if(myMsg->TTL == 0) {
          // Drop packet if expired or seen
-         dbg(FLOODING_CHANNEL,"PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
+            dbg(FLOODING_CHANNEL,"TTL = 0, PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
          }
-
+         if(myMsg->isKnown(myMsg)) {
+            dbg(FLOODING_CHANNEL,"Already seen PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
+         }
 
          
          if(myMsg->dest == TOS_NODE_ID) {
@@ -133,11 +145,20 @@ implementation{
             }
             // ELSE packet does not belong to current node, flood packet
             else {
+              // makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1, myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
+               makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, sizeof(myMsg->payload));
+               dbg(FLOODING_CHANNEL, "Packet from %d, intended for %d is being Rebroadcasted./n", myMsg->src, myMsg->dest);
+               insertPack(sendPackage);   // Packet to be inserted into seen packet list
 
+               call Sender.send(sendPackage, AM_BROADCAST_ADDR);  // Resend packet
             }	
 
          }
-
+         // Packets receive a packet from broadcast address
+         // Check to see if packet searching for neighbors
+         if(AM_BROADCAST_ADDR == myMsg->dest) {
+            
+         }
 
          ///////////////////
 
@@ -147,6 +168,7 @@ implementation{
       dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
       return msg;
    }
+
 
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
