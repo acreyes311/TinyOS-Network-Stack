@@ -42,6 +42,8 @@ implementation {
     Node.Neighbors -> List;
     Node.Packets -> List_V2;
     
+    components new ListC(Neighbor*, 100) as DroppedNeighborsC;
+    Node.DroppedNeighbors -> DroppedNeighborsC;
     // Add component Lists ( packetlist, neighborlists)
 
 }
