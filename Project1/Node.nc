@@ -79,19 +79,19 @@ implementation{
    }
 
    event void Boot.booted(){
-        //uint32_t start;
-       // uint32_t end;
+       uint32_t start;
+       uint32_t end;
       call AMControl.start();  
      
       dbg(GENERAL_CHANNEL, "Booted\n");
 
-      //start = call Random.rand32() % 2000;   // random up to 2000 ms
-    //  end = call Random.rand32() % 10000 + 2000;  // 10000-12000 ms
+      start = call Random.rand32() % 2000;   // random up to 2000 ms
+     end = call Random.rand32() % 10000 + 2000;  // 10000-12000 ms
       // Call to timer fired event
-      //call periodicTimer.startPeriodicAt(start,end); //starts timer // from start to end
+      call periodicTimer.startPeriodicAt(start,end); //starts timer // from start to end
       // Or just
      // call periodicTimer.startPeriodic(1000); //1000 ms
-   //  dbg(NEIGHBOR_CHANNEL, "START TIMER");
+     dbg(NEIGHBOR_CHANNEL, "START TIMER");
    }
 
    void neighborList(){
@@ -246,10 +246,19 @@ implementation{
                      /*
                         ADD isEMPTY CHECK 
                      */
+                     //if(call DroppedNeighbors.isEmpty()){
                      NewNeighbor = call DroppedNeighbors.popfront();
+                     //NewNeighbor = call DroppedNeighbors.get();
                      NewNeighbor->nodeID = myMsg->src;
                      NewNeighbor->hops = 0;
                      call Neighbors.pushback(NewNeighbor);
+                 //}
+                 //else{
+                 //	NewNeighbor = call DroppedNeighbors.popfront();
+                 //	NewNeighbor->nodeID = myMsg->src;
+                 	//NewNeighbor->hops = 0;
+                 	//call Neighbors.pushback(NewNeighbor);
+                // }
                   }
                   break;
                 // Default switch case; Break  

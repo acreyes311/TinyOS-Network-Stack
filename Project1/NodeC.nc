@@ -18,13 +18,11 @@ implementation {
     components Node;
     components new AMReceiverC(AM_PACK) as GeneralReceive;
 
-    components new TimerMilliC() as myTimerC;   // create a new timer named myTimerC
+    components new TimerMilliC() as periodicTimerC;   // create a new timer named myTimerC
     components new ListC(Neighbor* , 100) as List;
     components new ListC(pack, 100) as List_V2;
     
-    //App.Boot -> MainC.boot
-    //App.periodicTimer -> myTimerC;    //Wire interface to component
-    Node.periodicTimer -> myTimerC;    //Wire interface to component
+    
     
     Node -> MainC.Boot;
 
@@ -44,6 +42,12 @@ implementation {
     
     components new ListC(Neighbor*, 100) as DroppedNeighborsC;
     Node.DroppedNeighbors -> DroppedNeighborsC;
+
+    components RandomC as Random;
+    Node.Random -> Random;
+    //App.Boot -> MainC.boot
+    //App.periodicTimer -> myTimerC;    //Wire interface to component
+    Node.periodicTimer -> periodicTimerC;    //Wire interface to component
     // Add component Lists ( packetlist, neighborlists)
 
 }
