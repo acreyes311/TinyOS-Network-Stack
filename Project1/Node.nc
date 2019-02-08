@@ -142,7 +142,7 @@ implementation{
       Neighbor *NewNeighbor;
       Neighbor *TempNeighbor;
 
-      dbg(GENERAL_CHANNEL, "Packet Received\n");
+      dbg(GENERAL_CHANNEL, "Packet Received Inside Receive\n");
       if(len==sizeof(pack))
       {
 
@@ -151,7 +151,7 @@ implementation{
 
          //////////////////////  ERROR STARTS HERE /////////////////////
 
-         dbg(GENERAL_CHANNEL, "Package  received from : %s\n", myMsg->src);
+         dbg(GENERAL_CHANNEL, "Package  received from : %d\n", myMsg->src);
          dbg(FLOODING_CHANNEL,"Packet being flooded to %d\n", myMsg->dest);
 
          ///////////////////
@@ -160,9 +160,9 @@ implementation{
          // Drop packet if expired or seen
             dbg(FLOODING_CHANNEL,"TTL = 0, PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
          }
-         //if(myMsg-> isKnown(myMsg)) {
-           // dbg(FLOODING_CHANNEL,"Already seen PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
-         //}
+         if(isKnown(myMsg)) {
+            dbg(FLOODING_CHANNEL,"Already seen PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
+         }
       
          if(myMsg->dest == TOS_NODE_ID) 
          {
@@ -298,10 +298,11 @@ implementation{
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
-      //sendPackage.seq = sendPackage.seq + 1;
-      makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, seqNumber, payload, PACKET_MAX_PAYLOAD_SIZE);
+      sendPackage.seq = sendPackage.seq + 1;
+      makePack(&sendPackage, TOS_NODE_ID, destination, 15, 0, sendPackage.seq, payload, PACKET_MAX_PAYLOAD_SIZE);
+      //makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, seqNumber, payload, PACKET_MAX_PAYLOAD_SIZE);
       call Sender.send(sendPackage, AM_BROADCAST_ADDR); 
-      seqNumber = seqNumber + 1;
+      //seqNumber = seqNumber + 1;
       //destination);
    }
 
