@@ -11,8 +11,8 @@
 
 /*
  * TODO: 
- * **** Compiles but gets segmentation error in RECEIVE *****
- * **** Need to find whats not working now t_t ******
+ * Implement Random timer ?
+ * Fix some dbg print statements. Add/remove
  * Fix all the If statements to correct order
  * Try to restructure more stuff *_* 
 */
@@ -147,10 +147,9 @@ implementation{
       {
 
          pack* myMsg=(pack*) payload;  // Message of received package
-         dbg(GENERAL_CHANNEL, "INSIDE if(len==sizeof(pack)\n");
+         //dbg(GENERAL_CHANNEL, "INSIDE if(len==sizeof(pack)\n");
 
-         //////////////////////  ERROR STARTS HERE /////////////////////
-
+         
          dbg(GENERAL_CHANNEL, "Package  received from : %d\n", myMsg->src);
          dbg(FLOODING_CHANNEL,"Packet being flooded to %d\n", myMsg->dest);
 
