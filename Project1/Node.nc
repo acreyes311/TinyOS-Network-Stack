@@ -11,11 +11,9 @@
 
 /*
  * TODO: 
+ * **** Compiles but gets segmentation error in RECEIVE *****
+ * **** Need to find whats not working now t_t ******
  * Fix all the If statements to correct order
- * Implement Neighbor discovery
- * Add isFull() to List.nc/ListC.nc- added
- * Figure out  DroppedNeighbors/poolofneighbors
- * For Random.rand32: it should include in both interface in Node.nc and component in NocdeC.nc.
  * Try to restructure more stuff *_* 
 */
 
@@ -79,18 +77,19 @@ implementation{
    }
 
    event void Boot.booted(){
-       uint32_t start;
-       uint32_t end;
+       //uint32_t start;
+     //  uint32_t end;
       call AMControl.start();  
      
       dbg(GENERAL_CHANNEL, "Booted\n");
 
-      start = call Random.rand32() % 2000;   // random up to 2000 ms
-     end = call Random.rand32() % 10000 + 2000;  // 10000-12000 ms
+     // start = call Random.rand32() % 2000;   // random up to 2000 ms
+    // end = call Random.rand32() % 10000 + 2000;  // 10000-12000 ms
       // Call to timer fired event
-      call periodicTimer.startPeriodicAt(start,end); //starts timer // from start to end
+      dbg(NEIGHBOR_CHANNEL, "BEFORE START TIMER");
+     // call periodicTimer.startPeriodicAt(start,end); //starts timer // from start to end
       // Or just
-     // call periodicTimer.startPeriodic(1000); //1000 ms
+     call periodicTimer.startPeriodic(1000); //1000 ms
      dbg(NEIGHBOR_CHANNEL, "START TIMER");
    }
 
@@ -146,7 +145,12 @@ implementation{
       dbg(GENERAL_CHANNEL, "Packet Received\n");
       if(len==sizeof(pack))
       {
+
          pack* myMsg=(pack*) payload;  // Message of received package
+         dbg(GENERAL_CHANNEL, "INSIDE if(len==sizeof(pack)\n");
+
+         //////////////////////  ERROR STARTS HERE /////////////////////
+
          dbg(GENERAL_CHANNEL, "Package  received from : %s\n", myMsg->src);
          dbg(FLOODING_CHANNEL,"Packet being flooded to %d\n", myMsg->dest);
 

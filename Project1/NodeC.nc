@@ -21,7 +21,9 @@ implementation {
     components new TimerMilliC() as periodicTimerC;   // create a new timer named myTimerC
     components new ListC(Neighbor* , 100) as List;
     components new ListC(pack, 100) as List_V2;
-    
+    components new ListC(pack,100) as PacketsC;
+
+    Node.Packets -> PacketsC;
     
     
     Node -> MainC.Boot;
@@ -43,7 +45,10 @@ implementation {
     components new ListC(Neighbor*, 100) as DroppedNeighborsC;
     Node.DroppedNeighbors -> DroppedNeighborsC;
 
-    components RandomC as Random;
+    components new ListC(Neighbor*, 100) as NeighborsC;
+    Node.Neighbors -> NeighborsC;
+
+    components RandomC as Random; 
     Node.Random -> Random;
     //App.Boot -> MainC.boot
     //App.periodicTimer -> myTimerC;    //Wire interface to component
