@@ -92,7 +92,6 @@ implementation{
      call periodicTimer.startPeriodic(1000); //1000 ms
      dbg(NEIGHBOR_CHANNEL, "START TIMER");
    }
-
    void neighborList(){
        pack Package;
       char* message;
@@ -101,19 +100,24 @@ implementation{
          uint16_t i= 0;
           uint16_t j= 0;
          Neighbor* line;
+         Neighbor* neighborline;
          for(i =0; i< size; i++){
             line = call Neighbors.get(i);
            dbg(NEIGHBOR_CHANNEL, "Neighbors Node: %d/n", line);
            line->hops++;
            j= line->hops;
+           if(j > 5){
+               neighborline = call Neighbors.remove(i);
+               call DroppedNeighbors.pushfront(j);
+               i--;
+               size--;
+           }
          }
       }
-      else{
-         dbg(NEIGHBOR_CHANNEL, "Neighbors Node: %d/n", TOS_NODE_ID);
-      }
-
-
+       insertPack(Package);
+       call Sender.send(Package, AM_BROADCAST_ADDR);
    }
+
 
    //PeriodicTimer Event implementation
    event void periodicTimer.fired() {
