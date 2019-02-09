@@ -24,4 +24,6 @@ interface List<t>{
 	command uint16_t size();
 	command t get(uint16_t position);
 	command bool isFull();
+	command t remove(uint16_t position);
+}
 }
