@@ -133,13 +133,13 @@ implementation{
    		// Loop through Neighbors List and increase hops
    		for (i = 0; i < size; i++) {
    			temp = call Neighbors.get(i);
-   			temp.hops++;
-   		}
-   		for (i = 0; i < size; i++) {
-   			temp = call Neighbors.get(i);
+   			temp.hops = temp.hops + 1;
+   	//	}
+   	//	for (i = 0; i < size; i++) {
+   			//temp = call Neighbors.get(i);
    			hops = temp.hops;
    			// Drop expired neighbors after 5 pings and put in DroppedList
-   			if (hops > 5) {
+   			if (hops > 3) {
    				line = call Neighbors.remove(i);
    				dbg(NEIGHBOR_CHANNEL,"Node %d has been dropped from Node %d\n",line.nodeID,TOS_NODE_ID);
    				call DroppedNeighbors.pushfront(line);
@@ -184,7 +184,7 @@ implementation{
     //  NewNeighbor->nodeID = NULL;
      // NewNeighbor->hops = NULL;
 
-      dbg(GENERAL_CHANNEL, "Packet Received Inside Receive\n");
+      //dbg(GENERAL_CHANNEL, "Packet Received Inside Receive\n");
       if(len==sizeof(pack))
       {
 
@@ -289,7 +289,7 @@ implementation{
                         //break;
                      }
                   }
-               }s
+               }
                   // If neighbor is not found in our list then it is New and need to add it to the list
                   if(!flag) {
                     // uint16_t temp;
@@ -303,16 +303,16 @@ implementation{
                      if(call DroppedNeighbors.isEmpty()){
                      
                      NewNeighbor = call DroppedNeighbors.popfront();
-                     dbg(GENERAL_CHANNEL, "1st line\n");
+                     dbg(GENERAL_CHANNEL, "1st !\n");
                      //NewNeighbor = call DroppedNeighbors.get();
                      //temp = myMsg->src;
                      NewNeighbor.nodeID =  myMsg->src;
                     // NewNeighbor->nodeID = temp;
-                     dbg(GENERAL_CHANNEL, "2nd line\n");
+                     dbg(GENERAL_CHANNEL, "2nd !!\n");
                      NewNeighbor.hops = 0;
-                     dbg(GENERAL_CHANNEL, "3rd line\n");
+                     dbg(GENERAL_CHANNEL, "3rd !!\n");
                      call Neighbors.pushback(NewNeighbor);
-                     dbg(GENERAL_CHANNEL, "pushback line\n");
+                     dbg(GENERAL_CHANNEL, "pushback New Neighbor\n");
                  }
                  else{
                  	NewNeighbor = call DroppedNeighbors.popfront();
@@ -345,7 +345,7 @@ implementation{
          */
          ///////////////////
 
-         dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
+         //dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
          return msg;
       }
       dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
