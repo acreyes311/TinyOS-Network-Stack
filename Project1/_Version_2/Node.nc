@@ -23,12 +23,11 @@
 #include "includes/sendInfo.h"
 #include "includes/channels.h"
 
-// Neighbor struct for node ID and number of hops/ping
-typedef nx_struct Neighbor{
+
+typedef nx_struct Neighbor {
    nx_uint16_t nodeID;
    nx_uint16_t hops;
 }Neighbor;
-
 
 module Node{
    uses interface Boot;
@@ -52,9 +51,12 @@ module Node{
 
 
 
+
 implementation{
    pack sendPackage;
    uint16_t seqNumber = 0; 
+   Neighbor* NewNeighbor;
+   Neighbor* TempNeighbor;
 
    // Prototypes
 
@@ -125,8 +127,8 @@ implementation{
    	Neighbor* temp;
 
 
-   	//dbg(NEIGHBOR_CHANNEL, "NeighborList, node %d looking for neighbor\n",TOS_NODE_ID);
-   	if(!call Neighbors.isEmpty()) {
+   	dbg(NEIGHBOR_CHANNEL, "NeighborList, node %d looking for neighbor\n",TOS_NODE_ID);
+   	if(!(call Neighbors.isEmpty())) {
    		dbg(NEIGHBOR_CHANNEL, "NeighborList, node %d looking for neighbor\n",TOS_NODE_ID);
    		// Loop through Neighbors List and increase hops
    		for (i = 0; i < size; i++) {
@@ -177,8 +179,10 @@ implementation{
       bool flag;
       uint16_t size;
       uint16_t i = 0;
-      Neighbor *NewNeighbor;
-      Neighbor *TempNeighbor;
+      //Neighbor* NewNeighbor;
+     // Neighbor* TempNeighbor;
+    //  NewNeighbor->nodeID = NULL;
+     // NewNeighbor->hops = NULL;
 
       dbg(GENERAL_CHANNEL, "Packet Received Inside Receive\n");
       if(len==sizeof(pack))
@@ -249,21 +253,26 @@ implementation{
          // Check to see if packet searching for neighbors
      
          if(AM_BROADCAST_ADDR == myMsg->dest) {
+            
+
             // What protocol does the message contain
-           switch(myMsg->protocol) {
+           //switch(myMsg->protocol) {
               
                 //PROTOCOL_PING SWITCH CASE
-               case PROTOCOL_PING:
+               //case PROTOCOL_PING:
+               if(myMsg->protocol == PROTOCOL_PING){
                   dbg(GENERAL_CHANNEL, "myMsg->Protocol %d\n", myMsg->protocol);
                   //Look for neighbors
                   dbg(NEIGHBOR_CHANNEL, "Packet from %d searching for neighbors\n",myMsg->src);
-                  makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, sizeof(myMsg->payload));
-                  //makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
+                  //makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, sizeof(myMsg->payload));
+                  makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
                   insertPack(sendPackage); // Insert pack into our list
                   call Sender.send(sendPackage, myMsg->src);
-                  break;
+                  //break;
+               }
 
-               case PROTOCOL_PINGREPLY:
+               //case PROTOCOL_PINGREPLY:
+               if(myMsg->protocol == PROTOCOL_PINGREPLY) {
                   dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d\n", myMsg->src);
                   size = call Neighbors.size(); // get size from our List of Neighbors
                   flag = FALSE;  // Initiate to FALSE in declaration?? Set to true only when neighbor is found
@@ -277,25 +286,33 @@ implementation{
                         dbg(NEIGHBOR_CHANNEL, "Node %d found in Neighbors List\n", myMsg->src);
                         TempNeighbor->hops = 0;
                         flag = TRUE;
-                        break;
+                        //break;
                      }
                   }
+               }
                   // If neighbor is not found in our list then it is New and need to add it to the list
                   if(!flag) {
+                    // uint16_t temp;
                      dbg(NEIGHBOR_CHANNEL, "New Neighbor %d found and adding to our list\n", myMsg->src);
-
+                     
 
                      /*
                      * Segmentation Error Here
-                     * Get a lot of warnings on make about calls to Neighbors.remove/isFull/popFront fan out
-                     *
+                     * Cant Access NewNeighbor->nodeID or ->hops
                      */
                      if(call DroppedNeighbors.isEmpty()){
+                     
                      NewNeighbor = call DroppedNeighbors.popfront();
+                     dbg(GENERAL_CHANNEL, "1st line\n");
                      //NewNeighbor = call DroppedNeighbors.get();
-                     NewNeighbor->nodeID = myMsg->src;
+                     //temp = myMsg->src;
+                     //NewNeighbor->nodeID =  myMsg->src;
+                    // NewNeighbor->nodeID = temp;
+                     dbg(GENERAL_CHANNEL, "2nd line\n");
                      NewNeighbor->hops = 0;
+                     dbg(GENERAL_CHANNEL, "3rd line\n");
                      call Neighbors.pushback(NewNeighbor);
+                     dbg(GENERAL_CHANNEL, "pushback line\n");
                  }
                  else{
                  	NewNeighbor = call DroppedNeighbors.popfront();
@@ -303,16 +320,17 @@ implementation{
                  	NewNeighbor->hops = 0;
                  	call Neighbors.pushback(NewNeighbor);
                  }
-                  }
-                  break;
+                  //}
+                  //break;
                 // Default switch case; Break  
-               default:
-                  break; 
+              // default:
+                 // break; 
                   
             }
+         }
 
 
-         }  // End if(AMBROADCAST)
+           // End if(AMBROADCAST)
 
          // Packet does not belong to current node
          /*
