@@ -180,14 +180,14 @@ implementation{
          if(isKnown(myMsg)) {
             dbg(FLOODING_CHANNEL,"Already seen PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
          }
-       if(AM_BROADCAST_ADDR == myMsg->dest) {            
+       else if(AM_BROADCAST_ADDR == myMsg->dest) {            
 
             // What protocol does the message contain
-          // switch(myMsg->protocol) {
+           switch(myMsg->protocol) {
               
                 //PROTOCOL_PING SWITCH CASE
-               //case PROTOCOL_PING:
-               if(myMsg->protocol == PROTOCOL_PING){
+               case PROTOCOL_PING:
+               //if(myMsg->protocol == PROTOCOL_PING){
                   dbg(GENERAL_CHANNEL, "myMsg->Protocol %d\n", myMsg->protocol);
                   //Look for neighbors
                   dbg(NEIGHBOR_CHANNEL, "Packet from %d searching for neighbors\n",myMsg->src);
@@ -195,11 +195,12 @@ implementation{
                   makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
                   insertPack(sendPackage); // Insert pack into our list
                   call Sender.send(sendPackage, myMsg->src);
-                 // break;
-               }
+                  break;
+               //}
 
               // case PROTOCOL_PINGREPLY:
-               if(myMsg->protocol == PROTOCOL_PINGREPLY) {
+               //if(myMsg->protocol == PROTOCOL_PINGREPLY) {
+                case PROTOCOL_PINGREPLY:
                   dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d\n", myMsg->src);
                   size = call Neighbors.size(); // get size from our List of Neighbors
                   flag = FALSE;  // Initiate to FALSE in declaration?? Set to true only when neighbor is found
@@ -213,11 +214,11 @@ implementation{
                         dbg(NEIGHBOR_CHANNEL, "Node %d found in Neighbors List\n", myMsg->src);
                         TempNeighbor.hops = 0;
                         flag = TRUE;
-                      //  break;
+                        break;
                      }
                   }
                  // break;
-               }
+               //}
                   // If neighbor is not found in our list then it is New and need to add it to the list
                   if(!flag) {
                     // uint16_t temp;
@@ -245,12 +246,15 @@ implementation{
                   call Neighbors.pushback(NewNeighbor);
                  }
                 }
-                 // break;
+
+                  break;
                 // Default switch case; Break  
-              // default:
-                 // break;                   
+              default:
+                  break;                   
             }
-         if(myMsg->dest == TOS_NODE_ID) 
+          }
+          // End Broadcast
+         else if(myMsg->dest == TOS_NODE_ID) 
          {
             dbg(FLOODING_CHANNEL,"Packet #%d arrived from %d with payload: %s\n", myMsg->seq, myMsg->src, myMsg->payload);
             // dont push PROTOCOL_CMD into list, will not allow same node to send multiple pings
@@ -280,47 +284,19 @@ implementation{
                dbg(FLOODING_CHANNEL, "PING REPLY RECEIVED FROM %d\n ",myMsg->src);
             }
 
-            //////////////////////  MAY BE IN WRONG SPOT  MIGHT NEED TO BE MOVED BELOW IF(BROADCAST ADDRESS) /////////////////////
-            // ELSE packet does not belong to current node, flood packet
-            /*
-            else {
-              // makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1, myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
-               makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, sizeof(myMsg->payload));
-               //makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
-               dbg(FLOODING_CHANNEL, "Packet from %d, intended for %d is being Rebroadcasted./n", myMsg->src, myMsg->dest);
-               insertPack(sendPackage);   // Packet to be inserted into seen packet list
 
-               call Sender.send(sendPackage, AM_BROADCAST_ADDR);  // Resend packet
-            }  
-            */
          }
+      
+         // Packet does not belong to current node         
          else {
               // makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1, myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
                makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, sizeof(myMsg->payload));
                //makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
                dbg(FLOODING_CHANNEL, "Packet from %d, intended for %d is being Rebroadcasted./n", myMsg->src, myMsg->dest);
                insertPack(sendPackage);   // Packet to be inserted into seen packet list
-
-               call Sender.send(sendPackage, AM_BROADCAST_ADDR);  // Resend packet
-            } 
-         // Neighbor Discovery
-         // Packets receive a packet from broadcast address
-         // Check to see if packet searching for neighbors
-     
-        
-        //}
-           // End if(AMBROADCAST)
-         // Packet does not belong to current node         
-     /*    else {
-              // makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1, myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
-               makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, sizeof(myMsg->payload));
-               //makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
-               dbg(FLOODING_CHANNEL, "Packet from %d, intended for %d is being Rebroadcasted./n", myMsg->src, myMsg->dest);
-               insertPack(sendPackage);   // Packet to be inserted into seen packet list
                call Sender.send(sendPackage, AM_BROADCAST_ADDR);  // Resend packet
             }  
-         */
-         ///////////////////
+        
 
          //dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
          return msg;
