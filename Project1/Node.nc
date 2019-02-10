@@ -243,9 +243,11 @@ implementation{
                         dbg(NEIGHBOR_CHANNEL, "Node %d found in Neighbors List\n", myMsg->src);
                         TempNeighbor->hops = 0;
                         flag = TRUE;
-                        break;
+                      //  break; error
                      }
                   }
+                   break;
+                   
                   // If neighbor is not found in our list then it is New and need to add it to the list
                   if(!flag) {
                      dbg(NEIGHBOR_CHANNEL, "New Neighbor %d found and adding to our list\n", myMsg->src);
