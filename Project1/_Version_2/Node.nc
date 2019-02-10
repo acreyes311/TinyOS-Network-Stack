@@ -11,7 +11,9 @@
 
 /*
  * TODO: 
- * Segmentation Error line 290
+ * Changed the lists from <Neighbor *> pointers to just <Neighbor>
+ * Changed everything from Neighbor->nodeID/hops to just Neighbor.nodeId/Neighbor.hops
+ * No more segmentation error, but it seems like it loops through a lot.
  * Fix all the If statements to correct order
  * Try to restructure more stuff *_* 
 */
