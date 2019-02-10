@@ -86,12 +86,13 @@ implementation{
      // start = call Random.rand32() % 2000;   // random up to 2000 ms
     // end = call Random.rand32() % 10000 + 2000;  // 10000-12000 ms
       // Call to timer fired event
-      dbg(NEIGHBOR_CHANNEL, "BEFORE START TIMER");
+      dbg(NEIGHBOR_CHANNEL, "BEFORE START TIMER\n");
      // call periodicTimer.startPeriodicAt(start,end); //starts timer // from start to end
       // Or just
      call periodicTimer.startPeriodic(1000); //1000 ms
-     dbg(NEIGHBOR_CHANNEL, "START TIMER");
+     dbg(NEIGHBOR_CHANNEL, "START TIMER\n");
    }
+   /*
    void neighborList(){
        pack Package;
       char* message;
@@ -103,9 +104,10 @@ implementation{
          Neighbor* neighborline;
          for(i =0; i< size; i++){
             line = call Neighbors.get(i);
-           dbg(NEIGHBOR_CHANNEL, "Neighbors Node: %d/n", line);
+           dbg(NEIGHBOR_CHANNEL, "Neighbors Node: %d\n", line);
            line->hops++;
            j= line->hops;
+           dbg(NEIGHBOR_CHANNEL,"J = line->Hops %d\n", j);
            if(j > 5){
                neighborline = call Neighbors.remove(i);
                call DroppedNeighbors.pushfront(j);
@@ -114,15 +116,53 @@ implementation{
            }
          }
       }
+      
        insertPack(Package);
        call Sender.send(Package, AM_BROADCAST_ADDR);
    }
+*/
+ void neighborList() {
+      pack package;
+      char *msg;
+      uint16_t size = call Neighbors.size();
+      uint16_t i = 0;
+      uint16_t hops = 0;
+      Neighbor* line;
+      Neighbor* temp;
 
+
+    //  dbg(NEIGHBOR_CHANNEL, "NeighborList, node %d looking for neighbor\n",TOS_NODE_ID);
+      if(!call Neighbors.isEmpty()) {
+         dbg(NEIGHBOR_CHANNEL, "NeighborList, node %d looking for neighbor\n",TOS_NODE_ID);
+         // Loop through Neighbors List and increase hops
+         for (i = 0; i < size; i++) {
+            temp = call Neighbors.get(i);
+            temp->hops++;
+        // }
+        // for (i = 0; i < size; i++) {
+           // temp = call Neighbors.get(i);
+            hops = temp->hops;
+            // Drop expired neighbors after 5 pings and put in DroppedList
+            if (hops > 5) {
+               line = call Neighbors.remove(i);
+               dbg(NEIGHBOR_CHANNEL,"Node %d has been dropped from Node %d\n",line->nodeID,TOS_NODE_ID);
+               call DroppedNeighbors.pushfront(line);
+               i--;
+               size--;
+            }
+         }
+      }
+      // Ping list of neighbors
+      msg = "Ping Neighbor\n";
+      makePack(&package, TOS_NODE_ID, AM_BROADCAST_ADDR,2,PROTOCOL_PING,1,(uint8_t*)msg,(uint8_t)sizeof(msg));
+      insertPack(package);
+      call Sender.send(package, AM_BROADCAST_ADDR);
+   }
 
    //PeriodicTimer Event implementation
    event void periodicTimer.fired() {
         // neighbor discovery function call or implement discovery here
-        dbg(NEIGHBOR_CHANNEL, "Call to neighborList()");
+       // dbg(NEIGHBOR_CHANNEL, "Call to neighborList()");
         neighborList();
         
    }
@@ -213,7 +253,7 @@ implementation{
          // Neighbor Discovery
          // Packets receive a packet from broadcast address
          // Check to see if packet searching for neighbors
-         // IMPLEMENTED TWICE?
+         
          if(AM_BROADCAST_ADDR == myMsg->dest) {
             // What protocol does the message contain
            switch(myMsg->protocol) {
@@ -230,7 +270,7 @@ implementation{
                   break;
 
                case PROTOCOL_PINGREPLY:
-                  dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d/n", myMsg->src);
+                  dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d\n", myMsg->src);
                   size = call Neighbors.size(); // get size from our List of Neighbors
                   flag = FALSE;  // Initiate to FALSE in declaration?? Set to true only when neighbor is found
 
@@ -243,7 +283,7 @@ implementation{
                         dbg(NEIGHBOR_CHANNEL, "Node %d found in Neighbors List\n", myMsg->src);
                         TempNeighbor->hops = 0;
                         flag = TRUE;
-                      //  break; error
+                       // break; //error
                      }
                   }
                    break;
@@ -255,18 +295,18 @@ implementation{
                      /*
                         ADD isEMPTY CHECK 
                      */
-                     //if(call DroppedNeighbors.isEmpty()){
+                     if(call DroppedNeighbors.isEmpty()){
                      NewNeighbor = call DroppedNeighbors.popfront();
                      //NewNeighbor = call DroppedNeighbors.get();
                      NewNeighbor->nodeID = myMsg->src;
                      NewNeighbor->hops = 0;
                      call Neighbors.pushback(NewNeighbor);
-                 //}
+                 }
                  //else{
-                 //	NewNeighbor = call DroppedNeighbors.popfront();
-                 //	NewNeighbor->nodeID = myMsg->src;
-                 	//NewNeighbor->hops = 0;
-                 	//call Neighbors.pushback(NewNeighbor);
+                 //  NewNeighbor = call DroppedNeighbors.popfront();
+                 //  NewNeighbor->nodeID = myMsg->src;
+                  //NewNeighbor->hops = 0;
+                  //call Neighbors.pushback(NewNeighbor);
                 // }
                   }
                   break;
