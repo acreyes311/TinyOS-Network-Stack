@@ -7,17 +7,6 @@
  *
  */
 
-
-
-/*
- * TODO: 
- * Changed the lists from <Neighbor *> pointers to just <Neighbor>
- * Changed everything from Neighbor->nodeID/hops to just Neighbor.nodeId/Neighbor.hops
- * No more segmentation error, but it seems like it loops through a lot.
- * Fix all the If statements to correct order
- * Try to restructure more stuff *_* 
-*/
-
 #include <Timer.h>
 #include "includes/command.h"
 #include "includes/packet.h"
@@ -80,51 +69,28 @@ implementation{
    }
 
    event void Boot.booted(){
-       uint32_t start;
-       uint32_t end;
+       //uint32_t start;
+      // uint32_t end;
       call AMControl.start();  
      
       dbg(GENERAL_CHANNEL, "Booted\n");
 
-     start = call Random.rand32() % 2000;   // random up to 2000 ms
-     end = call Random.rand32() % 10000 + 2000;  // 10000-12000 ms
+     //start = call Random.rand32() % 2000;   // random up to 2000 ms
+     //end = call Random.rand32() % 10000 + 2000;  // 10000-12000 ms
       // Call to timer fired event
       //dbg(GENERAL_CHANNEL, "BEFORE START TIMER\n");
-      call periodicTimer.startPeriodicAt(start,end); //starts timer // from start to end
+      //call periodicTimer.startPeriodicAt(start,end); //starts timer // from start to end
       // Or just
-    // call periodicTimer.startPeriodic(100); //1000 ms
-     dbg(NEIGHBOR_CHANNEL, "START TIMER at %d, end at %d\n",start,end);
+     //call periodicTimer.startPeriodic(1000); //1000 ms
+     //dbg(NEIGHBOR_CHANNEL, "START TIMER at %d, end at %d\n",start,end);
    }
 
-/*
-   void neighborList(){
-       pack Package;
-      char* message;
-      //dbg(NEIGHBOR_CHANNEL, "Inside neighborlist()\n");
-      if(!call Neighbors.isEmpty()){
-         uint16_t size = call Neighbors.size();
-         uint16_t i= 0;
-          uint16_t j= 0;
-         Neighbor* line;
-         for(i =0; i< size; i++){
-            line = call Neighbors.get(i);
-           dbg(NEIGHBOR_CHANNEL, "Neighbors Node: %d\n", line);
-           line->hops++;
-           j= line->hops;
-         }
-      }
-      else{
-         dbg(NEIGHBOR_CHANNEL, "Neighbors Node: %d\n", TOS_NODE_ID);
-      }
-
-   }
-*/
    void neighborList() {
-   	pack package;
+   	//pack package;
    	char *msg;
    	uint16_t size;
    	uint16_t i = 0;
-   	uint16_t hops;
+   	//uint16_t hops;
    	Neighbor line;
    	Neighbor temp;
     size = call Neighbors.size();
@@ -134,27 +100,32 @@ implementation{
    		dbg(NEIGHBOR_CHANNEL, "NeighborList, node %d looking for neighbor\n",TOS_NODE_ID);
    		// Loop through Neighbors List and increase hops
    		for (i = 0; i < size; i++) {
+   			line = call Neighbors.get(i);
+   			//temp.hops = temp.hops + 1;
+        line.hops++;
+        call Neighbors.remove(i);
+        call Neighbors.pushback(line);
+   		}
+   		for (i = 0; i < size; i++) {
    			temp = call Neighbors.get(i);
-   			temp.hops = temp.hops + 1;
-   	//	}
-   	//	for (i = 0; i < size; i++) {
-   			//temp = call Neighbors.get(i);
-   			hops = temp.hops;
-   			// Drop expired neighbors after 5 pings and put in DroppedList
-   			if (hops > 3) {
-   				line = call Neighbors.remove(i);
-   				dbg(NEIGHBOR_CHANNEL,"Node %d has been dropped from Node %d\n",line.nodeID,TOS_NODE_ID);
-   				call DroppedNeighbors.pushfront(line);
+   			//hops = temp.hops;
+
+   			// Drop expired neighbors after 3 pings and put in DroppedList
+   			if (temp.hops > 3) {
+   				//line = call Neighbors.remove(i);
+          call Neighbors.remove(i);
+   				dbg(NEIGHBOR_CHANNEL,"Node %d has EXPIRED and DROPPED from Node %d\n",line.nodeID,TOS_NODE_ID);
+   				//call DroppedNeighbors.pushfront(line);
    				i--;
    				size--;
    			}
    		}
    	}
    	// Ping list of neighbors
-   	msg = "Ping Neighbor\n";
-   	makePack(&package, TOS_NODE_ID, AM_BROADCAST_ADDR,2,PROTOCOL_PING,1,(uint8_t*)msg,(uint8_t)sizeof(msg));
-   	insertPack(package);
-   	call Sender.send(package, AM_BROADCAST_ADDR);
+   	msg = "Message\n";
+   	makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR,2,PROTOCOL_PING,1,(uint8_t*)msg,(uint8_t)sizeof(msg));
+   	insertPack(sendPackage);
+   	call Sender.send(sendPackage, AM_BROADCAST_ADDR);
    }
 
    //PeriodicTimer Event implementation
@@ -168,6 +139,7 @@ implementation{
    event void AMControl.startDone(error_t err){
       if(err == SUCCESS){
          dbg(GENERAL_CHANNEL, "Radio On\n");
+         call periodicTimer.startPeriodic(1000); //1000 ms
       }else{
          //Retry until successful
          call AMControl.start();
@@ -181,23 +153,16 @@ implementation{
       bool flag;
       uint16_t size;
       uint16_t i = 0;
-      //Neighbor* NewNeighbor;
-     // Neighbor* TempNeighbor;
-    //  NewNeighbor->nodeID = NULL;
-     // NewNeighbor->hops = NULL;
 
-      //dbg(GENERAL_CHANNEL, "Packet Received Inside Receive\n");
+      
       if(len==sizeof(pack))
       {
 
          pack* myMsg=(pack*) payload;  // Message of received package
-         //dbg(GENERAL_CHANNEL, "INSIDE if(len==sizeof(pack)\n");
+                  
+         //dbg(GENERAL_CHANNEL, "Package  received from : %d\n", myMsg->src);
+         //dbg(FLOODING_CHANNEL,"Packet being flooded to %d\n", myMsg->dest);
 
-         
-         dbg(GENERAL_CHANNEL, "Package  received from : %d\n", myMsg->src);
-         dbg(FLOODING_CHANNEL,"Packet being flooded to %d\n", myMsg->dest);
-
-         ///////////////////
          
          if(myMsg->TTL == 0) {
          // Drop packet if expired or seen
@@ -212,9 +177,9 @@ implementation{
             dbg(FLOODING_CHANNEL,"Packet #%d arrived from %d with payload: %s\n", myMsg->seq, myMsg->src, myMsg->payload);
             // dont push PROTOCOL_CMD into list, will not allow same node to send multiple pings
 
-            if(myMsg->protocol != PROTOCOL_CMD) {
-               insertPack(*myMsg); // push non protol_cmd into packet list
-            }
+           // if(myMsg->protocol != PROTOCOL_CMD) {
+             //  insertPack(*myMsg); // push non protol_cmd into packet list
+          //  }
 
             /////BEGIN CHECKING FLOODING PROTOCOLS////
 
@@ -223,8 +188,8 @@ implementation{
                dbg(FLOODING_CHANNEL,"Ping replying to %d\n", myMsg->src);
                //makepack with myMsg->src as destination
                // Two ways.
-               makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, sendPackage.seq+1,(uint8_t *)myMsg->payload, sizeof(myMsg->payload));               
-               //makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, seqNumber, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
+               //makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, sendPackage.seq+1,(uint8_t *)myMsg->payload, sizeof(myMsg->payload));               
+               makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, seqNumber, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
                seqNumber++;   // increase sequence id number
                // Push into seen/sent package list
                insertPack(sendPackage);
@@ -254,11 +219,10 @@ implementation{
          // Packets receive a packet from broadcast address
          // Check to see if packet searching for neighbors
      
-         if(AM_BROADCAST_ADDR == myMsg->dest) {
-            
+         if(AM_BROADCAST_ADDR == myMsg->dest) {            
 
             // What protocol does the message contain
-           //switch(myMsg->protocol) {
+          // switch(myMsg->protocol) {
               
                 //PROTOCOL_PING SWITCH CASE
                //case PROTOCOL_PING:
@@ -270,10 +234,10 @@ implementation{
                   makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
                   insertPack(sendPackage); // Insert pack into our list
                   call Sender.send(sendPackage, myMsg->src);
-                  //break;
+                 // break;
                }
 
-               //case PROTOCOL_PINGREPLY:
+              // case PROTOCOL_PINGREPLY:
                if(myMsg->protocol == PROTOCOL_PINGREPLY) {
                   dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d\n", myMsg->src);
                   size = call Neighbors.size(); // get size from our List of Neighbors
@@ -288,9 +252,10 @@ implementation{
                         dbg(NEIGHBOR_CHANNEL, "Node %d found in Neighbors List\n", myMsg->src);
                         TempNeighbor.hops = 0;
                         flag = TRUE;
-                        //break;
+                      //  break;
                      }
                   }
+                 // break;
                }
                   // If neighbor is not found in our list then it is New and need to add it to the list
                   if(!flag) {
@@ -298,10 +263,6 @@ implementation{
                      dbg(NEIGHBOR_CHANNEL, "New Neighbor %d found and adding to our list\n", myMsg->src);
                      
 
-                     /*
-                     * Segmentation Error Here
-                     * Cant Access NewNeighbor->nodeID or ->hops
-                     */
                      if(call DroppedNeighbors.isEmpty()){
                      
                      NewNeighbor = call DroppedNeighbors.popfront();
@@ -322,15 +283,14 @@ implementation{
                  	NewNeighbor.hops = 0;
                  	call Neighbors.pushback(NewNeighbor);
                  }
-                  //}
-                  //break;
+                }
+                 // break;
                 // Default switch case; Break  
               // default:
                  // break; 
                   
             }
-         }
-
+        //}
 
            // End if(AMBROADCAST)
 
@@ -359,7 +319,7 @@ implementation{
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
       sendPackage.seq = sendPackage.seq + 1;
-      makePack(&sendPackage, TOS_NODE_ID, destination, 15, 0, sendPackage.seq, payload, PACKET_MAX_PAYLOAD_SIZE);
+      makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, sendPackage.seq, payload, PACKET_MAX_PAYLOAD_SIZE);
       //makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, seqNumber, payload, PACKET_MAX_PAYLOAD_SIZE);
       call Sender.send(sendPackage, AM_BROADCAST_ADDR); 
       //seqNumber = seqNumber + 1;
@@ -401,8 +361,9 @@ implementation{
          for(i = 0; i < size; i++) {
             temp = call Packets.get(i);   // set temp to indexed packet in packet list
             // Checks for same source destination and sequence #
-            if ((temp.src == p->src) && (temp.dest == p->dest) && (temp.seq == p->seq))
+            if ((temp.src == p->src) && (temp.dest == p->dest) && (temp.seq == p->seq)){
                return TRUE;
+             }
          }
          return FALSE;     
       }
