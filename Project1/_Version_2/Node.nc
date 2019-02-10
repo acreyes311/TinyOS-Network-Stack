@@ -45,8 +45,8 @@ module Node{
 
    // Will need List of packets and Neighbors 
    uses interface List<pack> as Packets;  // List of Packets
-   uses interface List<Neighbor* > as Neighbors;   // List of Known Neighbors
-   uses interface List<Neighbor* > as DroppedNeighbors;  // List of Neighbors dropped out of network
+   uses interface List<Neighbor > as Neighbors;   // List of Known Neighbors
+   uses interface List<Neighbor > as DroppedNeighbors;  // List of Neighbors dropped out of network
 }
 
 
@@ -55,8 +55,8 @@ module Node{
 implementation{
    pack sendPackage;
    uint16_t seqNumber = 0; 
-   Neighbor* NewNeighbor;
-   Neighbor* TempNeighbor;
+   Neighbor NewNeighbor;
+   Neighbor TempNeighbor;
 
    // Prototypes
 
@@ -120,28 +120,28 @@ implementation{
    void neighborList() {
    	pack package;
    	char *msg;
-   	uint16_t size = call Neighbors.size();
+   	uint16_t size;
    	uint16_t i = 0;
-   	uint16_t hops = 0;
-   	Neighbor* line;
-   	Neighbor* temp;
+   	uint16_t hops;
+   	Neighbor line;
+   	Neighbor temp;
+    size = call Neighbors.size();
 
-
-   	dbg(NEIGHBOR_CHANNEL, "NeighborList, node %d looking for neighbor\n",TOS_NODE_ID);
-   	if(!(call Neighbors.isEmpty())) {
+   	//dbg(NEIGHBOR_CHANNEL, "NeighborList, node %d looking for neighbor\n",TOS_NODE_ID);
+   	if(!call Neighbors.isEmpty()) {
    		dbg(NEIGHBOR_CHANNEL, "NeighborList, node %d looking for neighbor\n",TOS_NODE_ID);
    		// Loop through Neighbors List and increase hops
    		for (i = 0; i < size; i++) {
    			temp = call Neighbors.get(i);
-   			temp->hops++;
+   			temp.hops++;
    		}
    		for (i = 0; i < size; i++) {
    			temp = call Neighbors.get(i);
-   			hops = temp->hops;
+   			hops = temp.hops;
    			// Drop expired neighbors after 5 pings and put in DroppedList
    			if (hops > 5) {
    				line = call Neighbors.remove(i);
-   				dbg(NEIGHBOR_CHANNEL,"Node %d has been dropped from Node %d\n",line->nodeID,TOS_NODE_ID);
+   				dbg(NEIGHBOR_CHANNEL,"Node %d has been dropped from Node %d\n",line.nodeID,TOS_NODE_ID);
    				call DroppedNeighbors.pushfront(line);
    				i--;
    				size--;
@@ -282,14 +282,14 @@ implementation{
                   for(i = 0; i < size; i++){
                      TempNeighbor = call Neighbors.get(i);
                      // CHECK FOR A MATCH, IF TRUE RESET HOPS( NEW NAME ?)
-                     if(TempNeighbor->nodeID == myMsg->src){
+                     if(TempNeighbor.nodeID == myMsg->src){
                         dbg(NEIGHBOR_CHANNEL, "Node %d found in Neighbors List\n", myMsg->src);
-                        TempNeighbor->hops = 0;
+                        TempNeighbor.hops = 0;
                         flag = TRUE;
                         //break;
                      }
                   }
-               }
+               }s
                   // If neighbor is not found in our list then it is New and need to add it to the list
                   if(!flag) {
                     // uint16_t temp;
@@ -306,18 +306,18 @@ implementation{
                      dbg(GENERAL_CHANNEL, "1st line\n");
                      //NewNeighbor = call DroppedNeighbors.get();
                      //temp = myMsg->src;
-                     //NewNeighbor->nodeID =  myMsg->src;
+                     NewNeighbor.nodeID =  myMsg->src;
                     // NewNeighbor->nodeID = temp;
                      dbg(GENERAL_CHANNEL, "2nd line\n");
-                     NewNeighbor->hops = 0;
+                     NewNeighbor.hops = 0;
                      dbg(GENERAL_CHANNEL, "3rd line\n");
                      call Neighbors.pushback(NewNeighbor);
                      dbg(GENERAL_CHANNEL, "pushback line\n");
                  }
                  else{
                  	NewNeighbor = call DroppedNeighbors.popfront();
-                 	NewNeighbor->nodeID = myMsg->src;
-                 	NewNeighbor->hops = 0;
+                 	NewNeighbor.nodeID = myMsg->src;
+                 	NewNeighbor.hops = 0;
                  	call Neighbors.pushback(NewNeighbor);
                  }
                   //}
