@@ -8,13 +8,7 @@
  */
 
 
-
-/*
- * TODO: 
- * Segmentation Error line 290
- * Fix all the If statements to correct order
- * Try to restructure more stuff *_* 
-*/
+//remove "if(AM_BROADCAST == myMsg ->dest" statement 
 
 #include <Timer.h>
 #include "includes/command.h"
