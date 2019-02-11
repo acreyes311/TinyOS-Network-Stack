@@ -6,7 +6,12 @@
  * @date   2013/09/03
  *
  */
-
+/*
+ * I think this is best version so far.
+ * Still dont think it reache all the way to the end though.
+ * Will keep trying to fix/change it more
+ * 
+ */
 #include <Timer.h>
 #include "includes/command.h"
 #include "includes/packet.h"
