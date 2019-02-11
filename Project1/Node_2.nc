@@ -6,12 +6,7 @@
  * @date   2013/09/03
  *
  */
-/*
- * I think this is best version so far.
- * Still dont think it reache all the way to the end though.
- * Will keep trying to fix/change it more
- * 
- */
+
 #include <Timer.h>
 #include "includes/command.h"
 #include "includes/packet.h"
@@ -144,7 +139,7 @@ implementation{
    event void AMControl.startDone(error_t err){
       if(err == SUCCESS){
          dbg(GENERAL_CHANNEL, "Radio On\n");
-         call periodicTimer.startPeriodic(1000); //1000 ms
+         call periodicTimer.startPeriodic(5000); //1000 ms
       }else{
          //Retry until successful
          call AMControl.start();
@@ -223,12 +218,12 @@ implementation{
                      if(call DroppedNeighbors.isEmpty()){
                      
                      NewNeighbor = call DroppedNeighbors.popfront();
-                     dbg(GENERAL_CHANNEL, "NewNeighbor = Dropped.popfront()\n");                     
+                    // dbg(GENERAL_CHANNEL, "NewNeighbor = Dropped.popfront()\n");                     
                      NewNeighbor.nodeID =  myMsg->src;
                     
-                     dbg(GENERAL_CHANNEL, "New.NodeID = msg->src\n");
+                     //dbg(GENERAL_CHANNEL, "New.NodeID = msg->src\n");
                      NewNeighbor.hops = 0;
-                     dbg(GENERAL_CHANNEL, "NEW.hops = 0\n");
+                    // dbg(GENERAL_CHANNEL, "NEW.hops = 0\n");
                      call Neighbors.pushback(NewNeighbor);
                      dbg(GENERAL_CHANNEL, "pushback New Neighbor!\n");
                  }
@@ -283,7 +278,7 @@ implementation{
          else {
                makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, sizeof(myMsg->payload));
                //makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
-               dbg(FLOODING_CHANNEL, "Packet from %d, intended for %d is being Rebroadcasted./n", myMsg->src, myMsg->dest);
+               dbg(FLOODING_CHANNEL, "Packet from %d, intended for %d is being Rebroadcasted.\n", myMsg->src, myMsg->dest);
                insertPack(sendPackage);   // Packet to be inserted into seen packet list
                call Sender.send(sendPackage, AM_BROADCAST_ADDR);  // Resend packet
             }          
