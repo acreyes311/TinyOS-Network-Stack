@@ -188,9 +188,9 @@ implementation{
            switch(myMsg->protocol) {
               
                 //PROTOCOL_PING SWITCH CASE //
+                // repackage with TTL-1 and PING_REPLY PROTOCOL
                case PROTOCOL_PING:
-                  //dbg(GENERAL_CHANNEL, "myMsg->Protocol %d\n", myMsg->protocol);
-                  //Look for neighbors
+                  //dbg(GENERAL_CHANNEL, "myMsg->Protocol %d\n", myMsg->protocol);                  
                  // dbg(NEIGHBOR_CHANNEL, "Packet from %d searching for neighbors\n",myMsg->src);
                  // makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, sizeof(myMsg->payload));
                   makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
@@ -280,7 +280,8 @@ implementation{
 
          }
       
-         // Packet does not belong to current node         
+         // Packet does not belong to current node 
+         // Flood Packet with TTL - 1
          else {
                makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, sizeof(myMsg->payload));
                //makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
