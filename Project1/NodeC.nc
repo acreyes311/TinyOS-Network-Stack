@@ -19,9 +19,9 @@ implementation {
     components new AMReceiverC(AM_PACK) as GeneralReceive;
 
     components new TimerMilliC() as periodicTimerC;   // create a new timer named myTimerC
-    components new ListC(Neighbor* , 100) as List;
-    components new ListC(pack, 100) as List_V2;
-    components new ListC(pack,100) as PacketsC;
+    //components new ListC(Neighbor* , 100) as List;
+    //components new ListC(pack, 100) as List_V2;
+    components new ListC(pack,64) as PacketsC;
 
     Node.Packets -> PacketsC;
     
@@ -39,13 +39,13 @@ implementation {
     components CommandHandlerC;
     Node.CommandHandler -> CommandHandlerC;
 
-    Node.Neighbors -> List;
-    Node.Packets -> List_V2;
+   // Node.Neighbors -> List;
+    //Node.Packets -> List_V2;
     
-    components new ListC(Neighbor*, 100) as DroppedNeighborsC;
+    components new ListC(Neighbor, 64) as DroppedNeighborsC;
     Node.DroppedNeighbors -> DroppedNeighborsC;
 
-    components new ListC(Neighbor*, 100) as NeighborsC;
+    components new ListC(Neighbor, 64) as NeighborsC;
     Node.Neighbors -> NeighborsC;
 
     components RandomC as Random; 
