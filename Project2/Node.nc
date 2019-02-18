@@ -131,8 +131,12 @@ implementation{
    		}
    	}
 
+   
    	// After Dropping expired neighbors now Ping list of neighbors
    	msg = "Message\n";
+      
+      signal CommandHandler.printNeighbors(); // printing out the CommandHandler
+      
     // Send discovered packets, destination AM_BROADCAST
    	makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR,2,PROTOCOL_PING,1,(uint8_t*)msg,(uint8_t)sizeof(msg));
    	insertPack(sendPackage);
@@ -325,7 +329,23 @@ implementation{
 
 
 
-   event void CommandHandler.printRouteTable(){}
+   event void CommandHandler.printRouteTable(){
+       Neighbor nextneightbor;
+      uint16_t i=0;
+      uint16_t size;
+      size = call Neighbors.size(); 
+      dbg(NEIGHBOR_CHANNEL , "Neighbor Channel");
+      if(size == 0){
+        dbg(NEIGHBOR_CHANNEL, "-There is no Neightbor node %d\n", TOS_NODE_ID);
+      }
+      else
+      {
+        for(i =0; i < size; i++){
+            nextneightbor=  call Neighbors.get(i);
+            dbg(NEIGHBOR_CHANNEL, "--Next Neighbor is : %d\n", nextneightbor.nodeID);
+          }
+      }
+   }
 
    event void CommandHandler.printLinkState(){}
 
