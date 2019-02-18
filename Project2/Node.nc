@@ -325,12 +325,7 @@ implementation{
     //that list should be your neighbor ids.
     //neighborList(TOS_NODE_ID);
     //3 , 5
-   }
-
-
-
-   event void CommandHandler.printRouteTable(){
-       Neighbor nextneightbor;
+    Neighbor nextneightbor;
       uint16_t i=0;
       uint16_t size;
       size = call Neighbors.size(); 
@@ -346,6 +341,10 @@ implementation{
           }
       }
    }
+
+
+
+   event void CommandHandler.printRouteTable(){}
 
    event void CommandHandler.printLinkState(){}
 
