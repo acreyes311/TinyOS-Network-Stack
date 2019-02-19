@@ -52,10 +52,10 @@ implementation {
     Node.periodicTimer -> periodicTimerC;    //Wire interface to component
     
     // ----- PROJECT2 -------
-    //components new ListC(LinkState,64) as TentativeC;
-    //Node.Tentative -> TentativeC;
+    components new ListC(LinkState,64) as TentativeC;
+    Node.Tentative -> TentativeC;
 
-     //components new ListC(LinkState,64) as ConfirmedC;
-    //Node.Confirmed -> ConfirmedC;
+    components new ListC(LinkState,64) as ConfirmedC;
+    Node.Confirmed -> ConfirmedC;
 
 }
