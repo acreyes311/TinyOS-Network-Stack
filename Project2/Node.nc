@@ -20,6 +20,18 @@ typedef nx_struct Neighbor {
    nx_uint16_t hops;
 }Neighbor;
 
+/* Same as LinkStatePacket ? 
+ * LinkState struct contains:
+ * - ID of node that created
+ * - List of directly connected neighbors
+ * - A sequence number ( or can use packet seq number?)
+ * - A TTL for packet ( or can use packet TTL?)
+ * - Cost 
+ * - Next/Dest ?
+ */
+//typedef nx_struct LinkState {
+//  }LinkState;
+
 module Node{
    uses interface Boot;
 
@@ -38,6 +50,10 @@ module Node{
    uses interface List<pack> as Packets;  // List of Packets
    uses interface List<Neighbor > as Neighbors;   // List of Known Neighbors
    uses interface List<Neighbor > as DroppedNeighbors;  // List of Neighbors dropped out of network
+   // ----- Project2 -----
+   // Two lists mentioned in book
+   //uses interface List<LinkState> as Tentative;
+   //uses interface List<LinkState> as Confirmed;
 }
 
 
@@ -106,7 +122,7 @@ implementation{
 
     //Check to see if neighbors have been found
    	if(!call Neighbors.isEmpty()) {
-   		dbg(NEIGHBOR_CHANNEL, "NeighborList, node %d looking for neighbor\n",TOS_NODE_ID);
+ //  		dbg(NEIGHBOR_CHANNEL, "NeighborList, node %d looking for neighbor\n",TOS_NODE_ID);
    		// Loop through Neighbors List and increase hops/pings/age if not seen
       //  will be dropped every 5 pings a neighbor is not seen.
    		for (i = 0; i < size; i++) {
@@ -123,20 +139,16 @@ implementation{
    			if (temp.hops > 5) {
    				//line = call Neighbors.remove(i);
           call Neighbors.remove(i);
-   				dbg(NEIGHBOR_CHANNEL,"Node %d has EXPIRED and DROPPED from Node %d\n",line.nodeID,TOS_NODE_ID);
+   				//dbg(NEIGHBOR_CHANNEL,"Neighbor %d has EXPIRED and DROPPED from Node %d\n",line.nodeID,TOS_NODE_ID);
    				//call DroppedNeighbors.pushfront(line);
    				i--;
    				size--;
    			}
    		}
    	}
-
-   
+ //   signal CommandHandler.printNeighbors();
    	// After Dropping expired neighbors now Ping list of neighbors
    	msg = "Message\n";
-      
-      signal CommandHandler.printNeighbors(); // printing out the CommandHandler
-      
     // Send discovered packets, destination AM_BROADCAST
    	makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR,2,PROTOCOL_PING,1,(uint8_t*)msg,(uint8_t)sizeof(msg));
    	insertPack(sendPackage);
@@ -181,14 +193,14 @@ implementation{
          
          if(myMsg->TTL == 0) {
          // Drop packet if expired or seen
-            dbg(FLOODING_CHANNEL,"TTL = 0, PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
+   //         dbg(FLOODING_CHANNEL,"TTL = 0, PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
          }
          if(isKnown(myMsg)) {
-            dbg(FLOODING_CHANNEL,"Already seen PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
+   //         dbg(FLOODING_CHANNEL,"Already seen PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
          }
          // Determine Who Is neighbor through Destination = AM_BROADCAST Check
        else if(AM_BROADCAST_ADDR == myMsg->dest) {            
-          dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d\n", myMsg->src);
+   //       dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d\n", myMsg->src);
             // What protocol does the message contain
            switch(myMsg->protocol) {
               
@@ -207,7 +219,7 @@ implementation{
                
                 case PROTOCOL_PINGREPLY:
                   
-                  dbg(NEIGHBOR_CHANNEL, "Node %d is neighbor of %d\n", TempNeighbor.nodeID, myMsg->src);
+                 
                   size = call Neighbors.size(); // get size from our List of Neighbors
                   flag = FALSE;  //  Set to true only when neighbor is found
 
@@ -222,7 +234,7 @@ implementation{
                         flag = TRUE;
                         break;
                      }
-                     dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d\n", myMsg->src);
+           //          dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d\n", myMsg->src);
 
                   }
                  // break;
@@ -230,7 +242,7 @@ implementation{
                   // If neighbor is not found in our list then it is New and need to add it to the list
                   if(!flag) { // No Match
                    
-                     dbg(NEIGHBOR_CHANNEL, "New Neighbor %d found and adding to our list\n", myMsg->src);
+         //            dbg(NEIGHBOR_CHANNEL, "New Neighbor %d found and adding to our list\n", myMsg->src);
                      
                      if(call DroppedNeighbors.isEmpty()){
                      
@@ -241,7 +253,7 @@ implementation{
                      NewNeighbor.hops = 0;  // reset hops
                     // dbg(GENERAL_CHANNEL, "NEW.hops = 0\n");
                      call Neighbors.pushback(NewNeighbor);  // push into list
-                     dbg(GENERAL_CHANNEL, "pushback New Neighbor!\n");
+           //          dbg(GENERAL_CHANNEL, "pushback New Neighbor!\n");
                  }
                  else{
                   NewNeighbor = call DroppedNeighbors.popfront();
@@ -270,7 +282,7 @@ implementation{
 
             // PROTOCOL_PING: packet was pinged but no reply
             if(myMsg->protocol == PROTOCOL_PING) {
-               dbg(FLOODING_CHANNEL,"Ping replying to %d\n", myMsg->src);
+        //       dbg(FLOODING_CHANNEL,"Ping replying to %d\n", myMsg->src);
                //makepack with myMsg->src as destination
                //makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, sendPackage.seq+1,(uint8_t *)myMsg->payload, sizeof(myMsg->payload));               
                makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, seqNumber, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
@@ -283,7 +295,7 @@ implementation{
 
             // PROTOCOL PINGREPLY: Packet at correct destination; Stop sending packet
             if(myMsg->protocol == PROTOCOL_PINGREPLY) {
-               dbg(FLOODING_CHANNEL, "PING REPLY RECEIVED FROM %d\n ",myMsg->src);
+       //        dbg(FLOODING_CHANNEL, "PING REPLY RECEIVED FROM %d\n ",myMsg->src);
             }
 
 
@@ -294,7 +306,7 @@ implementation{
          else {
                makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, sizeof(myMsg->payload));
                //makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
-               dbg(FLOODING_CHANNEL, "Packet from %d, intended for %d is being Rebroadcasted.\n", myMsg->src, myMsg->dest);
+        //       dbg(FLOODING_CHANNEL, "Packet from %d, intended for %d is being Rebroadcasted.\n", myMsg->src, myMsg->dest);
                insertPack(sendPackage);   // Packet to be inserted into seen packet list
                call Sender.send(sendPackage, AM_BROADCAST_ADDR);  // Resend packet
             }          
@@ -321,7 +333,7 @@ implementation{
 
    event void CommandHandler.printNeighbors(){
     //go in your neighbor list
-    //and print out that ist
+    //and print out that list
     //that list should be your neighbor ids.
     //neighborList(TOS_NODE_ID);
     //3 , 5
@@ -329,18 +341,18 @@ implementation{
       uint16_t i=0;
       uint16_t size;
       size = call Neighbors.size(); 
-      dbg(NEIGHBOR_CHANNEL , "Neighbor Channel");
+      //dbg(NEIGHBOR_CHANNEL , "Neighbor Channel\n");
       if(size == 0){
-        dbg(NEIGHBOR_CHANNEL, "-There is no Neightbor node %d\n", TOS_NODE_ID);
+        dbg(NEIGHBOR_CHANNEL, "-There is no Neighbor to node: %d\n", TOS_NODE_ID);
       }
       else
       {
         for(i =0; i < size; i++){
             nextneightbor=  call Neighbors.get(i);
-            dbg(NEIGHBOR_CHANNEL, "--Next Neighbor is : %d\n", nextneightbor.nodeID);
+            dbg(NEIGHBOR_CHANNEL, "<--- Has Neighbor: %d\n", nextneightbor.nodeID);
           }
       }
-   }
+}
 
 
 
