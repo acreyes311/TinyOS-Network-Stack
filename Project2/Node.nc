@@ -235,8 +235,7 @@ implementation{
                
               // PROTOCOL_PINGREPLY SWITCH CASE //
                
-                case PROTOCOL_PINGREPLY:
-                  
+                case PROTOCOL_PINGREPLY:                  
                  
                   size = call Neighbors.size(); // get size from our List of Neighbors
                   flag = FALSE;  //  Set to true only when neighbor is found
@@ -255,7 +254,17 @@ implementation{
            //          dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d\n", myMsg->src);
 
                   }
-                 // break;
+
+                break;
+
+                // ---------------- PROJECT 2 -------------------//
+                // Go here After flooding LSP
+                case PROTOCOL_LINKSTATE:
+
+
+
+
+
                
                   // If neighbor is not found in our list then it is New and need to add it to the list
                   if(!flag) { // No Match
@@ -425,6 +434,14 @@ implementation{
    event void lspTimer.fired() {        
         //makeLSP();        
    }   
+   /*
+      Check Neighbor List
+      
+
+   */
+   void makeLSP(){
+
+   }
   
   /*
    * Dijkstra Pseudocode
