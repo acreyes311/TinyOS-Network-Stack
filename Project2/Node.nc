@@ -27,6 +27,14 @@ typedef nx_struct LinkState {
   nx_uint16_t dest;
 }LinkState;
 
+ 
+ /* 
+ * Only include list of neighbors in LinkState Struct( maybe source?)
+ * The LSP can be made/passed through make packet
+ * src = src, seq = seq,TTL..Protocol(2) LINKSTATE, and LinkState will be the payload as per PDF
+ * cost is just the number of hops. 1->2 = 1; 1->3 = 2 and so on.
+ */
+ 
 /* Same as LinkStatePacket ? 
  * LinkState struct contains:
  * - ID of node that created
@@ -36,8 +44,15 @@ typedef nx_struct LinkState {
  * - Cost 
  * - Next/Dest ?
  */
-//typedef nx_struct LinkState {
-//  }LinkState;
+ 
+typedef nx_struct LinkState {
+    //nx_uint16_t src;
+    //nx_uint16_t cost;
+    //nx_uint16_t seq;
+    //nx_uint16_t next;
+    List<Neighbor> neighbors; // current list of neighbors
+    }LinkState;
+
 
 module Node{
    uses interface Boot;
