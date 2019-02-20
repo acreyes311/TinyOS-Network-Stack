@@ -77,6 +77,8 @@ module Node{
    uses interface List<LinkState> as Tentative;
    uses interface List<LinkState> as Confirmed;
    
+   //New timer for LSP flooding?
+   
 }
 
 
