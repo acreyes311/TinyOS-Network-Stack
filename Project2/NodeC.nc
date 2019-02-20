@@ -58,4 +58,7 @@ implementation {
     components new ListC(LinkState,64) as ConfirmedC;
     Node.Confirmed -> ConfirmedC;
 
+    components new TimerMilliC() as lspTimerC;
+    Node.lspTimer -> lspTimerC;
+
 }

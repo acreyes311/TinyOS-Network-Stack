@@ -20,21 +20,6 @@ typedef nx_struct Neighbor {
    nx_uint16_t hops;
 }Neighbor;
 
-typedef nx_struct LinkState {
-  nx_uint16_t seq;
-  nx_uint16_t cost;
-  nx_uint16_t next;
-  nx_uint16_t dest;
-}LinkState;
-
- 
- /* 
- * Only include list of neighbors in LinkState Struct( maybe source?)
- * The LSP can be made/passed through make packet
- * src = src, seq = seq,TTL..Protocol(2) LINKSTATE, and LinkState will be the payload as per PDF
- * cost is just the number of hops. 1->2 = 1; 1->3 = 2 and so on.
- */
- 
 /* Same as LinkStatePacket ? 
  * LinkState struct contains:
  * - ID of node that created
@@ -44,7 +29,6 @@ typedef nx_struct LinkState {
  * - Cost 
  * - Next/Dest ?
  */
- 
 typedef nx_struct LinkState {
     //nx_uint16_t src;
     //nx_uint16_t cost;
@@ -52,6 +36,16 @@ typedef nx_struct LinkState {
     //nx_uint16_t next;
     List<Neighbor> neighbors; // current list of neighbors
     }LinkState;
+
+/*
+ * Only include list of neighbors in LinkState Struct( maybe source?)
+ * The LSP can be passed through make packet
+ * src = src, seq = seq,TTL..Protocol(2) LINKSTATE, and LinkState will be the payload as per PDF
+ * cost is just the number of hops. 1->2 = 1; 1->3 = 2 and so on.
+ * ---- OR ----
+ * turn LinkState into a pack?
+ */
+
 
 
 module Node{
@@ -76,12 +70,10 @@ module Node{
    // Two lists mentioned in book
    uses interface List<LinkState> as Tentative;
    uses interface List<LinkState> as Confirmed;
-   
-   //New timer for LSP flooding?
-   
+   // New Timer for LSP 
+   uses interface Timer<TMilli> as lspTimer // fires and call function to create LSP packet
+
 }
-
-
 
 
 implementation{
@@ -95,13 +87,6 @@ implementation{
    bool isKnown(pack *p);  // already seen function
    void insertPack(pack p); // push into list
    void neighborList(); // neighbor list
-   
-    //Project 2
-  void lspnneighborList(); // Link-Sate-Flooding
-  void Dijkstra();
-
-
-
    
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
@@ -140,51 +125,51 @@ implementation{
     * Repackage ping with AM_BROADCASE_ADDR as destination   
    */
    void neighborList() {
-    //pack package;
-    char *msg;
-    uint16_t size;
-    uint16_t i = 0;
-    
-    Neighbor line;
-    Neighbor temp;
+   	//pack package;
+   	char *msg;
+   	uint16_t size;
+   	uint16_t i = 0;
+   	
+   	Neighbor line;
+   	Neighbor temp;
     size = call Neighbors.size();
 
-    // Trouble with Neighbor* we need to call function get to retrieve each neighbor
+   	// Trouble with Neighbor* we need to call function get to retrieve each neighbor
     // ..Cant change hops directly (!neighbor->hops)
 
     //Check to see if neighbors have been found
-    if(!call Neighbors.isEmpty()) {
- //     dbg(NEIGHBOR_CHANNEL, "NeighborList, node %d looking for neighbor\n",TOS_NODE_ID);
-      // Loop through Neighbors List and increase hops/pings/age if not seen
+   	if(!call Neighbors.isEmpty()) {
+ //  		dbg(NEIGHBOR_CHANNEL, "NeighborList, node %d looking for neighbor\n",TOS_NODE_ID);
+   		// Loop through Neighbors List and increase hops/pings/age if not seen
       //  will be dropped every 5 pings a neighbor is not seen.
-      for (i = 0; i < size; i++) {
-        line = call Neighbors.get(i);
-        line.hops++;
+   		for (i = 0; i < size; i++) {
+   			line = call Neighbors.get(i);
+   			line.hops++;
         call Neighbors.remove(i);
         call Neighbors.pushback(line);
-      }
-      for (i = 0; i < size; i++) {
-        temp = call Neighbors.get(i);
-        //hops = temp.hops;
+   		}
+   		for (i = 0; i < size; i++) {
+   			temp = call Neighbors.get(i);
+   			//hops = temp.hops;
 
-        // Drop expired neighbors after 3 pings and put in DroppedList
-        if (temp.hops > 5) {
-          //line = call Neighbors.remove(i);
+   			// Drop expired neighbors after 3 pings and put in DroppedList
+   			if (temp.hops > 5) {
+   				//line = call Neighbors.remove(i);
           call Neighbors.remove(i);
-          //dbg(NEIGHBOR_CHANNEL,"Neighbor %d has EXPIRED and DROPPED from Node %d\n",line.nodeID,TOS_NODE_ID);
-          //call DroppedNeighbors.pushfront(line);
-          i--;
-          size--;
-        }
-      }
-    }
+   				//dbg(NEIGHBOR_CHANNEL,"Neighbor %d has EXPIRED and DROPPED from Node %d\n",line.nodeID,TOS_NODE_ID);
+   				//call DroppedNeighbors.pushfront(line);
+   				i--;
+   				size--;
+   			}
+   		}
+   	}
  //   signal CommandHandler.printNeighbors();
-    // After Dropping expired neighbors now Ping list of neighbors
-    msg = "Message\n";
+   	// After Dropping expired neighbors now Ping list of neighbors
+   	msg = "Message\n";
     // Send discovered packets, destination AM_BROADCAST
-    makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR,2,PROTOCOL_PING,1,(uint8_t*)msg,(uint8_t)sizeof(msg));
-    insertPack(sendPackage);
-    call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+   	makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR,2,PROTOCOL_PING,1,(uint8_t*)msg,(uint8_t)sizeof(msg));
+   	insertPack(sendPackage);
+   	call Sender.send(sendPackage, AM_BROADCAST_ADDR);
    }
 
    //PeriodicTimer Event implementation
@@ -193,6 +178,7 @@ implementation{
         neighborList();
         
    }
+
 
    event void AMControl.startDone(error_t err){
       if(err == SUCCESS){
@@ -278,12 +264,9 @@ implementation{
                      
                      if(call DroppedNeighbors.isEmpty()){
                      
-                     NewNeighbor = call DroppedNeighbors.popfront();  //Get new neighbor
-                    // dbg(GENERAL_CHANNEL, "NewNeighbor = Dropped.popfront()\n");                     
+                     NewNeighbor = call DroppedNeighbors.popfront();  //Get new neighbor                   
                      NewNeighbor.nodeID =  myMsg->src;  // add src id                    
-                     //dbg(GENERAL_CHANNEL, "New.NodeID = msg->src\n");
                      NewNeighbor.hops = 0;  // reset hops
-                    // dbg(GENERAL_CHANNEL, "NEW.hops = 0\n");
                      call Neighbors.pushback(NewNeighbor);  // push into list
            //          dbg(GENERAL_CHANNEL, "pushback New Neighbor!\n");
                  }
@@ -389,7 +372,7 @@ implementation{
 
 
    event void CommandHandler.printRouteTable(){
-     LinkState routing;
+      LinkState routing;
       uint16_t i =0;
       //uint16_t size;
       //size = call Confirmed.size();
@@ -397,8 +380,7 @@ implementation{
       for(i =0; i < call Confirmed.size(); i++){
             routing=  call Confirmed.get(i);
             dbg(ROUTING_CHANNEL, "--The Destination is %d\n  | The Cost is : %d\n  |  The next rout is %d\n", routing.dest, routing.cost, routing.next); //add i 
-          }
-
+      }
    }
 
    event void CommandHandler.printLinkState(){}
@@ -438,4 +420,10 @@ implementation{
          }
          return FALSE;     
       }
+
+   //Link State Pack Timer
+   event void lspTimer.fired() {        
+        //makeLSP();
+        
+   }   
 }
