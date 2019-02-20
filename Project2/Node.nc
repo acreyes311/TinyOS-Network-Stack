@@ -423,7 +423,28 @@ implementation{
 
    //Link State Pack Timer
    event void lspTimer.fired() {        
-        //makeLSP();
-        
+        //makeLSP();        
    }   
+  
+  /*
+   * Dijkstra Pseudocode
+   *  N: Set of all nodes
+   *  M: Set of nodes for which we think we have a shortest path
+   *  s: The node executing the algorithm
+   *  L(i,j): cost of edge (i,j) (infinite if no edge connects)
+   *  C(i): Cost of the path from s to i.
+   * 
+   *  M = {s} //M is the set of all nodes considered so far
+   *  for each n in N - {s}
+   *    C(n) = l(s,n)
+   *
+   *  //Find Shortest paths
+   * //Forever loop
+   *  while(N != M)
+   *    M = M +(Union) {w} such that C(w) is the smallest for all w in (N-M)(unconsidered)
+   *    for each n in (N-M)(unconsidered)
+   *      C(n) = MIN(C(n), C(w)+L(w,n))
+  */ 
+  //void dijkstra(){}
+
 }
