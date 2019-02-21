@@ -226,7 +226,8 @@ implementation{
          if(isKnown(myMsg)) {
    //         dbg(FLOODING_CHANNEL,"Already seen PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
          }
-         // Determine Who Is neighbor through Destination = AM_BROADCAST Check
+         
+         // Neighbor Discovery or LSP entry
        else if(AM_BROADCAST_ADDR == myMsg->dest) {            
    //       dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d\n", myMsg->src);
             // What protocol does the message contain
@@ -463,6 +464,7 @@ implementation{
      makePack(&LSP,TOS_NODE_ID,AM_BROADCAST_ADDR,20,PROTOCOL_LINKSTATE,seqNumber++,
         (uint16_t*) linkedNeighbors,(uint16_t) sizeof(linkedNeighbors));
      //push pack into our pack list
+     //   - May need to check isKnown for seen LSP packs later/ or make new function
      insertPack(LSP);
      call Sender.send(LSP,AM_BROADCAST_ADDR);
      dbg(ROUTING_CHANNEL, "Node %d has been flooded\n",TOS_NODE_ID);
