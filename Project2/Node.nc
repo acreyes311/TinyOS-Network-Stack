@@ -35,26 +35,17 @@ typedef nx_struct Neighbor {
  * - ID of node that created
  * - List of directly connected neighbors
  * - A sequence number ( or can use packet seq number?)
- * - A TTL for packet ( or can use packet TTL?)
- * - Cost 
- * - Next/Dest ?
+ * - Cost //TTL?
+ * - Next
  */
 typedef nx_struct LinkState {
-    //nx_uint16_t src;
-    //nx_uint16_t cost;
-    //nx_uint16_t seq;
-    //nx_uint16_t next;
-    List<Neighbor> neighbors; // current list of neighbors
+    nx_uint16_t node;
+    nx_uint16_t cost; // TTL?
+    nx_uint16_t seq;
+    nx_uint16_t nextHop;
+    nx_uint16_t neighbors[64]; // current list of neighbors
+    nx_uint16_t arrLength;
     }LinkState;
-
-/*
- * Only include list of neighbors in LinkState Struct( maybe source?)
- * The LSP can be passed through make packet
- * src = src, seq = seq,TTL..Protocol(2) LINKSTATE, and LinkState will be the payload as per PDF
- * cost is just the number of hops. 1->2 = 1; 1->3 = 2 and so on.
- * ---- OR ----
- * turn LinkState into a pack?
- */
 
 
 
@@ -97,6 +88,10 @@ implementation{
    bool isKnown(pack *p);  // already seen function
    void insertPack(pack p); // push into list
    void neighborList(); // neighbor list
+
+   // ---------Project 2 ------------//
+   void makeLSP();
+   void dijkstra();
    
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
