@@ -14,6 +14,16 @@
 #include "includes/sendInfo.h"
 #include "includes/channels.h"
 
+/*  TODO
+ * - Figure out how to use LinkState struct
+ *      - Maybe once inside receive protocol_linkstate we can see what we need?
+ * - Finish makeLSP
+ * - Follow makeLSP packet to receive-> PROTOCOL = LINKSTATE
+ *       - Figure out what to do inside protocol
+ * - Dijkstra T_T
+ * - Figure out Route Table
+ * - Do we need to check/update neighbors?
+*/
 
 typedef nx_struct Neighbor {
    nx_uint16_t nodeID;
@@ -432,15 +442,30 @@ implementation{
 
    //Link State Pack Timer
    event void lspTimer.fired() {        
-        //makeLSP();        
+      makeLSP();        
    }   
-   /*
-      Check Neighbor List
-      
-
+   /* makeLSP()
+    *  Check Neighbor List
+    *  Make array of neighbors or cost ?
+    *  Make pack, broadcast, linkstate protocol, array payload
    */
    void makeLSP(){
+      pack LSP;
+      Neighbor temp;
+      uint16_t size = (call NeighborList.size()) + 1;
+      uint16_t linkedNeighbors[size];
+      // DO NEIGHBOR STUFF BELOW
 
+
+
+     // Make our LSP packet and flood it through Broadcast
+     //Current,TTL20,LINKSTATE prot, payload = array
+     makePack(&LSP,TOS_NODE_ID,AM_BROADCAST_ADDR,20,PROTOCOL_LINKSTATE,seqNumber++,
+        (uint16_t*) linkedNeighbors,(uint16_t) sizeof(linkedNeighbors));
+     //push pack into our pack list
+     insertPack(LSP);
+     call Sender.send(LSP,AM_BROADCAST_ADDR);
+     dbg(ROUTING_CHANNEL, "Node %d has been flooded\n",TOS_NODE_ID);
    }
   
   /*
