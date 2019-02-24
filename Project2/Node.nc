@@ -71,6 +71,7 @@ module Node{
    // Two lists mentioned in book
    uses interface List<LinkState> as Tentative;
    uses interface List<LinkState> as Confirmed;
+   uses interface List<LinkState> as RouteTable;
    // New Timer for LSP 
    uses interface Timer<TMilli> as lspTimer // fires and call function to create LSP packet
 
@@ -264,9 +265,29 @@ implementation{
                 break;
 
                 // ---------------- PROJECT 2 -------------------//
-                // Go here After flooding LSP
+                // Go here After flooding LSP/ calculate route
                 case PROTOCOL_LINKSTATE:
+                //LSP
+                  LinkState LSP;
 
+                  dbg(ROUTING_CHANNEL, "Node: %d successfully received an LSP Packet from Node %d! Cost: %d \n", TOS_NODE_ID, myMsg->src, MAX_TTL - myMsg->TTL);
+                  dbg(ROUTING_CHANNEL, "Payload Array length is: %d \n", call RouteTable.size());
+
+                  //Check for LSP and current node match
+                  if(myMsg->src = TOS_NODE_ID){
+                    dbg(ROUTING_CHANNEL, "Match found. Dont Flood pack\n");
+                    // set flag = true
+
+                  }
+                  // Else src is not current node AND...?
+                  else {
+
+                    LSP.node = myMsg->src;
+                    LSP.seq = myMsg->seq;
+                    LSP.nextHop = myMsg->src;
+                    //LSP.cost = 
+
+                  }
 
 
 
@@ -446,7 +467,7 @@ implementation{
     *  Make pack, broadcast, linkstate protocol, array payload
    */
    void makeLSP(){
-      //pack LSP;
+      pack LSP;
       //Neighbor temp;
       //uint16_t size = (call NeighborList.size()) + 1;
      // uint16_t linkedNeighbors[size];
@@ -475,7 +496,7 @@ implementation{
      insertPack(LSP);
      call Sender.send(LSP,AM_BROADCAST_ADDR);
      dbg(ROUTING_CHANNEL, "Node %d has been flooded\n",TOS_NODE_ID);
-     }
+}
    }
   
   /*
