@@ -446,12 +446,24 @@ implementation{
     *  Make pack, broadcast, linkstate protocol, array payload
    */
    void makeLSP(){
-      pack LSP;
-      Neighbor temp;
-      uint16_t size = (call NeighborList.size()) + 1;
-      uint16_t linkedNeighbors[size];
+      //pack LSP;
+      //Neighbor temp;
+      //uint16_t size = (call NeighborList.size()) + 1;
+     // uint16_t linkedNeighbors[size];
       // DO NEIGHBOR STUFF BELOW
-
+      
+        uint16_t i = 0;       
+        Neighbor temp;
+        uint16_t size = call Neighbors.size();
+        uint16_t linkedNeighbors [size +1];
+        if(!call Neighbors.isEmpty()) 
+        {
+          for (i = 0; i < size; i++) 
+          {
+            temp = call Neighbors.get(i);
+            linkedNeighbors[i] = temp.nodeID;
+          }
+          linkedNeighbors[size] =0;
 
 
      // Make our LSP packet and flood it through Broadcast
@@ -463,6 +475,7 @@ implementation{
      insertPack(LSP);
      call Sender.send(LSP,AM_BROADCAST_ADDR);
      dbg(ROUTING_CHANNEL, "Node %d has been flooded\n",TOS_NODE_ID);
+     }
    }
   
   /*
