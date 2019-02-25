@@ -20,8 +20,8 @@
  * - Finish makeLSP
  * - Follow makeLSP packet to receive-> PROTOCOL = LINKSTATE
  *       - Figure out what to do inside protocol
- * - Dijkstra T_T
- * - Figure out Route Table
+ * - Dijkstra T_T (following pg 257)
+ * - Figure out Route Table (part of Dijkstra... Maybe)
  * - Do we need to check/update neighbors?
  * - Calculate cost: The difference in TTL's?
  *      - It took MaxTTL-MyTTL to get here ?
