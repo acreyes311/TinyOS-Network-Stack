@@ -23,6 +23,8 @@
  * - Dijkstra T_T
  * - Figure out Route Table
  * - Do we need to check/update neighbors?
+ * - Calculate cost: The difference in TTL's?
+ *      - It took MaxTTL-MyTTL to get here ?
 */
 
 typedef nx_struct Neighbor {
@@ -269,14 +271,20 @@ implementation{
                 case PROTOCOL_LINKSTATE:
                 //LSP
                   LinkState LSP;
+                  Neighbor lspNeighbor;
+                  uint16_t i;
+                  uint16_t lsSize;  // link state-> arrLength
+                  bool match = FALSE;
 
                   dbg(ROUTING_CHANNEL, "Node: %d successfully received an LSP Packet from Node %d! Cost: %d \n", TOS_NODE_ID, myMsg->src, MAX_TTL - myMsg->TTL);
                   dbg(ROUTING_CHANNEL, "Payload Array length is: %d \n", call RouteTable.size());
 
                   //Check for LSP and current node match
+                  // If node already has copy of LSP
                   if(myMsg->src = TOS_NODE_ID){
                     dbg(ROUTING_CHANNEL, "Match found. Dont Flood pack\n");
                     // set flag = true
+                    match = true;
 
                   }
                   // Else src is not current node AND...?
@@ -286,9 +294,42 @@ implementation{
                     LSP.seq = myMsg->seq;
                     LSP.nextHop = myMsg->src;
                     //LSP.cost = 
+                    //While our neighbor list not empty
+                    for(i = 0; i < call Neighbors.size()) {
+                      lspNeighbor = call Neighbors.get(i);
+                      if(myMsg->src == lspNeighbor.nodeID) {
+                        LSP.cost = 1;
+                        break;
+                      }
+                      else{
+                        LSP.cost = 20;
+                      }
+                    }
+
+                    i = 0;
+                    lsSize = 0;
+
+                    while(myMsg->payload[i] > 0){
+                      //Fill LSP table with directly connected neighbors
+                      LSP.neighbors[i] = myMsg->payload[i];
+                      lsSize++;
+                      i++;
+                    }
+
+                  }
+                  /*
+                    -If no Match make; Make LSP table and flood it if node hasn't seen
+                    -If no match between packet src and TOS_ID
+                        ->then Unique nodeID for RouteTable
+                        ->Store and replace with lowest cost
+                  */
+                  if(!match){
 
                   }
 
+
+
+                  break;  // break Case LINKSTATE
 
 
 
