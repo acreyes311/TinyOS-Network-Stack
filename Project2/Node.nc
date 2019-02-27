@@ -95,6 +95,7 @@ implementation{
    // ---------Project 2 ------------//
    void makeLSP();
    void dijkstra();
+   void printLSP();
    
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
@@ -330,7 +331,7 @@ implementation{
                       }
                       LSP.arrLength = lsSize;
                       call RouteTable.pushfront(LSP);
-                      //printLSP();
+                      printLSP();
                       seqNumber++
                       makePack(&sendPackage, myMsg->src, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_LINKSTATE
                         seqNumber, (uint8_t*)myMsg->payload, (uint8_t)sizeof(myMsg->payload));
@@ -339,6 +340,12 @@ implementation{
 
                     }
                     //If no match to protocol LINKSTATE
+                  /*
+                    -If no Match make; Make LSP table and flood it if node hasn't seen
+                    -If no match between packet src and TOS_ID
+                        ->then Unique nodeID for RouteTable
+                        ->Store and replace with lowest cost
+                  */
                     if(!match){
 
                     }
@@ -367,16 +374,8 @@ implementation{
                     // }
 
                   }
-                  /*
-                    -If no Match make; Make LSP table and flood it if node hasn't seen
-                    -If no match between packet src and TOS_ID
-                        ->then Unique nodeID for RouteTable
-                        ->Store and replace with lowest cost
-                  */
-                  if(!match){
 
-                  }
-                  
+
                   break;  // break Case LINKSTATE
 
 
@@ -607,5 +606,22 @@ implementation{
    *      C(n) = MIN(C(n), C(w)+L(w,n))
   */ 
   //void dijkstra(){}
+
+  
+  // Loops through our route table and prints out its LSP contents 
+    // Also be implemented as printLinkState ???
+  void printLSP(){
+    LinkState lsp;
+    uint16_t i,j;
+    for (i = 0; i < call RouteTable.size(); i++){
+      lsp = call RouteTable.get(i);
+      dbg(GENERAL_CHANNEL, "LSP from %d, Cost: %d, NextHop: %d, Seq: %d, neighbor size: %d\n",
+        lsp.dest, lsp.cost, lsp.nextHop, lsp.seq, lsp.arrLength);
+      for(j = 0; j < lsp.arrLength; j++){
+        dbg(GENERAL_CHANNEL, "Neighbor at %d\n",lsp.neighbors[j]);
+      }
+    }
+    dbg(GENERAL_CHANNEL, "RouteTable size is %d\n", call RouteTable.size());
+  }
 
 }
