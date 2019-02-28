@@ -25,6 +25,7 @@
  * - Do we need to check/update neighbors?
  * - Calculate cost: The difference in TTL's?
  *      - It took MaxTTL-MyTTL to get here ?
+ * - Might have to change from switch case to IF/ELSE, getting too many weird errors
 */
 
 typedef nx_struct Neighbor {
@@ -262,7 +263,6 @@ implementation{
                         break;
                      }
            //          dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d\n", myMsg->src);
-
                   }
                   break;
 
@@ -276,12 +276,12 @@ implementation{
                   ->most recent LSP eventually reaches all nodes
                 */
                 case PROTOCOL_LINKSTATE:
-                //LSP
+                             
                   LinkState LSP;
                   LinkState routeTemp;
                   Neighbor lspNeighbor;
                   uint16_t i;
-                  uint8_t lsSize;  // link state-> arrLength
+                  uint16_t lsSize;  // link state-> arrLength
                   bool match;
 
                   dbg(ROUTING_CHANNEL, "Node: %d successfully received an LSP Packet from Node %d! Cost: %d \n", TOS_NODE_ID, myMsg->src, MAX_TTL - myMsg->TTL);
@@ -310,7 +310,7 @@ implementation{
                         routeTemp = call RouteTable.front();
                         // Check for most current LSP(seq#)
                         if((LSP.dest == routeTemp.dest)&&(LSP.seq >= routeTemp.seq)){
-                          call RouteTable.pofront();  // Remove older LSP 
+                          call RouteTable.popfront();  // Remove older LSP 
                         }
                         else {
                           call routeTemp.pushfront(call RouteTable.front());
@@ -326,14 +326,14 @@ implementation{
                       while(myMsg->payload[i] > 0){
                         //Fill the LSP tables directly connected neighbors
                         LSP.neighbors[i] = myMsg->payload[i];
-                        lsSize++;
+                        lsSize++; // ERROR WRONG TYPE ARGUMENT TO INCREMENT ?????
                         i++;
                       }
                       LSP.arrLength = lsSize;
                       call RouteTable.pushfront(LSP);
                       printLSP();
-                      seqNumber++
-                      makePack(&sendPackage, myMsg->src, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_LINKSTATE
+                      seqNumber++;
+                      makePack(&sendPackage, myMsg->src, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_LINKSTATE,
                         seqNumber, (uint8_t*)myMsg->payload, (uint8_t)sizeof(myMsg->payload));
                       insertPack(sendPackage);
                       call Sender.send(sendPackage,AM_BROADCAST_ADDR);
@@ -502,7 +502,7 @@ implementation{
       dbg(ROUTING_CHANNEL, "ROUTING Channel");
       for(i =0; i < call Confirmed.size(); i++){
             routing=  call Confirmed.get(i);
-            dbg(ROUTING_CHANNEL, "--The Destination is %d\n  | The Cost is : %d\n  |  The next rout is %d\n", routing.dest, routing.cost, routing.next); //add i 
+            dbg(ROUTING_CHANNEL, "--The Destination is %d\n  | The Cost is : %d\n  |  The next rout is %d\n", routing.node, routing.cost, routing.nextHop); //add i 
       }
    }
 
@@ -577,7 +577,7 @@ implementation{
      // Make our LSP packet and flood it through Broadcast
      //Current,TTL20,LINKSTATE prot, payload = array
      makePack(&LSP,TOS_NODE_ID,AM_BROADCAST_ADDR,20,PROTOCOL_LINKSTATE,seqNumber++,
-        (uint16_t*) linkedNeighbors,(uint16_t) sizeof(linkedNeighbors));
+        (uint8_t*) linkedNeighbors,(uint16_t) sizeof(linkedNeighbors));
      //push pack into our pack list
      //   - May need to check isKnown for seen LSP packs later/ or make new function
      insertPack(LSP);
@@ -616,7 +616,7 @@ implementation{
     for (i = 0; i < call RouteTable.size(); i++){
       lsp = call RouteTable.get(i);
       dbg(GENERAL_CHANNEL, "LSP from %d, Cost: %d, NextHop: %d, Seq: %d, neighbor size: %d\n",
-        lsp.dest, lsp.cost, lsp.nextHop, lsp.seq, lsp.arrLength);
+        lsp.node, lsp.cost, lsp.nextHop, lsp.seq, lsp.arrLength);
       for(j = 0; j < lsp.arrLength; j++){
         dbg(GENERAL_CHANNEL, "Neighbor at %d\n",lsp.neighbors[j]);
       }
