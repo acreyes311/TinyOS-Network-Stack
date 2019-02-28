@@ -592,6 +592,19 @@ implementation{
      dbg(ROUTING_CHANNEL, "Node %d has been flooded\n",TOS_NODE_ID);
 }
 }
+ void printLSP(){
+    LinkState lsp;
+    uint16_t i,j;
+    for (i = 0; i < call RouteTable.size(); i++){
+      lsp = call RouteTable.get(i);
+      dbg(GENERAL_CHANNEL, "LSP from %d, Cost: %d, NextHop: %d, Seq: %d, neighbor size: %d\n",
+        lsp.node, lsp.cost, lsp.nextHop, lsp.seq, lsp.arrLength);
+      for(j = 0; j < lsp.arrLength; j++){
+        dbg(GENERAL_CHANNEL, "Neighbor at %d\n",lsp.neighbors[j]);
+      }
+    }
+    dbg(GENERAL_CHANNEL, "RouteTable size is %d\n", call RouteTable.size());
+  }
     /*void Dijkstra(uint8_t Destination, uint8_t Cost, uint8_t NextHop)
     {
       uint16_t i, j;
