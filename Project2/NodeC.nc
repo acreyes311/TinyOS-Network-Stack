@@ -60,9 +60,12 @@ implementation {
 
     components new ListC(LinkState,64) as RouteTableC;
     Node.RouteTable -> RouteTableC;
-    
+
     components new ListC(LinkState,64) as routeTempC;
     Node.routeTemp -> routeTempC;
+
+    components new ListC(LinkState,64) as tempLSC;
+    Node.tempLS -> tempLSC;
 
     components new TimerMilliC() as lspTimerC;
     Node.lspTimer -> lspTimerC;
