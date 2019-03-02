@@ -33,22 +33,22 @@
 
 typedef nx_struct Neighbor {
    nx_uint16_t nodeID;
-   nx_uint16_t hops;
+   nx_uint16_t life;
 }Neighbor;
 
-/* Same as LinkStatePacket ? 
+/* 
  * LinkState struct contains:
  * - ID of node that created
  * - List of directly connected neighbors
- * - A sequence number ( or can use packet seq number?)
- * - Cost //TTL?
+ * - A sequence number 
+ * - Cost
  * - Next
  */
 typedef nx_struct LinkState {
     nx_uint16_t neighbors[64]; // current list of neighbors
     nx_uint16_t arrLength;
-    nx_uint16_t node; // Change to Dest?
-    nx_uint16_t cost; // TTL?
+    nx_uint16_t node; // Dest?
+    nx_uint16_t cost; 
     nx_uint16_t seq;
     nx_uint16_t nextHop;
     }LinkState;
@@ -89,6 +89,7 @@ module Node{
 implementation{
    pack sendPackage;
    uint16_t seqNumber = 0; 
+   uint16_t lspCount = 0;
    Neighbor NewNeighbor;
    Neighbor TempNeighbor;
 
@@ -127,8 +128,8 @@ implementation{
 
    /*
     * neighborList() function Loops through our neighbor list if not empty
-    * and increase the hops/pings/life of each neighbor (number of pings since they were last heard)
-    * Check list again for any Neighbor with hops > 3 and drop them as expired. Add to Drop list
+    * and increase the life/pings/life of each neighbor (number of pings since they were last heard)
+    * Check list again for any Neighbor with life > 3 and drop them as expired. Add to Drop list
     * Repackage ping with AM_BROADCASE_ADDR as destination   
    */
    void neighborList() {
@@ -140,31 +141,31 @@ implementation{
     Neighbor line;
     Neighbor temp;
     size = call Neighbors.size();
-
+    lspCount++;
     // Trouble with Neighbor* we need to call function get to retrieve each neighbor
-    // ..Cant change hops directly (!neighbor->hops)
+    // ..Cant change life directly (!neighbor->life)
 
     //Check to see if neighbors have been found
     if(!call Neighbors.isEmpty()) {
  //     dbg(NEIGHBOR_CHANNEL, "NeighborList, node %d looking for neighbor\n",TOS_NODE_ID);
-      // Loop through Neighbors List and increase hops/pings/age if not seen
+      // Loop through Neighbors List and increase life/pings/age if not seen
       //  will be dropped every 5 pings a neighbor is not seen.
       for (i = 0; i < size; i++) {
         line = call Neighbors.get(i);
-        line.hops++;
+        line.life++;
         call Neighbors.remove(i);
         call Neighbors.pushback(line);
       }
       for (i = 0; i < size; i++) {
         temp = call Neighbors.get(i);
-        //hops = temp.hops;
+        //life = temp.life;
 
         // Drop expired neighbors after 3 pings and put in DroppedList
-        if (temp.hops > 5) {
+        if (temp.life > 5) {
           //line = call Neighbors.remove(i);
           call Neighbors.remove(i);
           //dbg(NEIGHBOR_CHANNEL,"Neighbor %d has EXPIRED and DROPPED from Node %d\n",line.nodeID,TOS_NODE_ID);
-          //call DroppedNeighbors.pushfront(line);
+          call DroppedNeighbors.pushfront(line);
           i--;
           size--;
         }
@@ -183,7 +184,21 @@ implementation{
    event void periodicTimer.fired() {
         // dbg(GENERAL_CHANNEL, "Call to neighborList()\n");
         neighborList();
-        makeLSP();          
+        if(lspCount > 1 && lspCount % 3 == 0 && lspCount < 16){
+          makeLSP();
+        }
+        //makeLSP(); 
+        if(lspCount > 1 && lspCount % 20 == 0 && lspCount < 61){}
+          //dijkstra();        
+
+        /*
+        if(lspCount < 17 && lspCount %3 == 2 && lspCount > 1){
+          makeLSP();
+        }
+
+        if(lspCount == 17)
+          dijkstra();
+        */           
    }
 
 
@@ -223,8 +238,7 @@ implementation{
          //dbg(FLOODING_CHANNEL,"Packet being flooded to %d\n", myMsg->dest);
          
          if(myMsg->TTL == 0) {
-         // Drop packet if expired or seen
-   //         dbg(FLOODING_CHANNEL,"TTL = 0, PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
+         // Drop packet if expired or seen 
          }
          if(isKnown(myMsg)) {
    //         dbg(FLOODING_CHANNEL,"Already seen PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
@@ -235,109 +249,7 @@ implementation{
    //       dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d\n", myMsg->src);
             // What protocol does the message contain
            switch(myMsg->protocol) {
-            // ---------------- PROJECT 2 -------------------//
-                // Go here After flooding LSP/ calculate route
-                /*  Linkstate Protocol
-                  Checks to see if LSP already has copy
-                  If not Store LSP
-                  If it does -> compare seq # and store larger seq #
-                  If received LSP is newest, send that copy to all its neighbors and they do same
-                  ->most recent LSP eventually reaches all nodes
-                */
-                case PROTOCOL_LINKSTATE:
-                             
-                  //LinkState LSP;
-                  //LinkState routeTemp;
-                  //Neighbor lspNeighbor;
-                  //uint16_t i;
-                  //uint16_t lsSize;  // link state-> arrLength
-                  //bool match;
 
-                 // dbg(ROUTING_CHANNEL, "Node: %d successfully received an LSP Packet from Node %d! Cost: %d \n", TOS_NODE_ID, myMsg->src, MAX_TTL - myMsg->TTL);
-                  //dbg(ROUTING_CHANNEL, "Payload Array length is: %d \n", call RouteTable.size());
-                  match = FALSE;
-                  //Check for LSP and current node match
-                  // If node already has copy of LSP
-                  if(myMsg->src == TOS_NODE_ID){
-                    dbg(ROUTING_CHANNEL, "Match found. Dont Flood pack\n");
-                    // set flag = true
-                    match = TRUE;
-
-                  }
-                  // Else src is not current node AND...?
-                  else {
-
-                    LSP.node = myMsg->src;
-                    LSP.seq = myMsg->seq;
-                    LSP.nextHop = myMsg->src; // not tos_node
-                    LSP.cost = MAX_TTL - myMsg->TTL; // Took this many hops to get here
-                    dbg(GENERAL_CHANNEL,"msgTTL:%d, LSP cost:%d from:%d\n",myMsg->TTL, LSP.cost, myMsg->src);
-
-                    if(!call RouteTable.isEmpty()){
-                      //i = 0;
-                      i = 0;
-                      lsSize = 0;
-                      while(myMsg->payload[i] > 0){
-                        //Fill the LSP tables directly connected neighbors
-                        LSP.neighbors[i] = myMsg->payload[i];
-                        lsSize++;
-                        i++;
-                      }
-                      while(!call RouteTable.isEmpty()) {
-                        temp = call RouteTable.front();
-                        // Check for most current LSP(seq#)
-                        if((LSP.node == temp.node)&&(LSP.seq >= temp.seq)){
-                          call RouteTable.popfront();  // Remove older LSP 
-                        }
-                        else {
-                          call tempLS.pushfront(call RouteTable.front());
-                          call RouteTable.popfront();
-                        }
-                        while(!call tempLS.isEmpty()){
-                          call RouteTable.pushback(call tempLS.front());
-                          call tempLS.popfront();
-                        }
-                      }
-                      /*
-                      i = 0;
-                      lsSize = 0;
-                      while(myMsg->payload[i] > 0){
-                        //Fill the LSP tables directly connected neighbors
-                        LSP.neighbors[i] = myMsg->payload[i];
-                        lsSize++;
-                        i++;
-                      }
-                      */
-                      LSP.arrLength = lsSize;
-                      call RouteTable.pushfront(LSP);
-                     // printLSP();
-                      seqNumber++;
-                      makePack(&sendPackage, myMsg->src, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_LINKSTATE,
-                        seqNumber, (uint8_t*)myMsg->payload, (uint8_t)sizeof(myMsg->payload));
-                      insertPack(sendPackage);
-                      call Sender.send(sendPackage,AM_BROADCAST_ADDR);
-
-                    }
-                    //If no match to protocol LINKSTATE
-                  /*
-                    -If no Match make; Make LSP table and flood it if node hasn't seen
-                    -If no match between packet src and TOS_ID
-                        ->then Unique nodeID for RouteTable
-                        ->Store and replace with lowest cost
-                  */
-                    if(!match){
-                      
-
-                    }
-
-
-                  }
-
-
-                  break;  // break Case LINKSTATE
-
-
-              
                 //PROTOCOL_PING SWITCH CASE //
                 // repackage with TTL-1 and PING_REPLY PROTOCOL
                case PROTOCOL_PING:
@@ -359,40 +271,171 @@ implementation{
                   // loop through our list of Neighbors and see if match is found
                   for(i = 0; i < size; i++){
                      TempNeighbor = call Neighbors.get(i);
-                     // CHECK FOR A MATCH, IF TRUE RESET HOPS
+                     // CHECK FOR A MATCH, IF TRUE RESET life
                      if(TempNeighbor.nodeID == myMsg->src){
                         //dbg(NEIGHBOR_CHANNEL, "Node %d found in Neighbors List\n", myMsg->src);
                        
-                        TempNeighbor.hops = 0;
+                        TempNeighbor.life = 0;
                         flag = TRUE;
-                        break;
+                        //break;
                      }
-           //          dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d\n", myMsg->src);
+                     //dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d\n", myMsg->src);
                   }
-                  //break;
-                
+                  //break;                
                
                   // If neighbor is not found in our list then it is New and need to add it to the list
-                  if(!flag) { // No Match
-                   
+                  if(!flag) { // No Match                   
          //            dbg(NEIGHBOR_CHANNEL, "New Neighbor %d found and adding to our list\n", myMsg->src);
                      
                      if(call DroppedNeighbors.isEmpty()){
                      
                      NewNeighbor = call DroppedNeighbors.popfront();  //Get new neighbor                   
                      NewNeighbor.nodeID =  myMsg->src;  // add src id                    
-                     NewNeighbor.hops = 0;  // reset hops
+                     NewNeighbor.life = 0;  // reset life
                      call Neighbors.pushback(NewNeighbor);  // push into list
            //          dbg(GENERAL_CHANNEL, "pushback New Neighbor!\n");
                  }
                  else{
                   NewNeighbor = call DroppedNeighbors.popfront();
                   NewNeighbor.nodeID = myMsg->src;
-                  NewNeighbor.hops = 0;
+                  NewNeighbor.life = 0;
                   call Neighbors.pushback(NewNeighbor);
                  }
                 }
+
                   break;
+            // ---------------- PROJECT 2 -------------------//
+                // Go here After flooding LSP/ calculate route
+                /*  Linkstate Protocol
+                  Checks to see if LSP already has copy
+                  If not Store LSP
+                  If it does -> compare seq # and store larger seq #
+                  If received LSP is newest, send that copy to all its neighbors and they do same
+                  ->most recent LSP eventually reaches all nodes
+                */
+                case PROTOCOL_LINKSTATE:                             
+                  //LinkState LSP;
+                  //LinkState routeTemp;
+                  //Neighbor lspNeighbor;
+                  //uint16_t i;
+                  //uint16_t lsSize;  // link state-> arrLength
+                  //bool match;
+                 // dbg(ROUTING_CHANNEL, "Node: %d successfully received an LSP Packet from Node %d! Cost: %d \n", TOS_NODE_ID, myMsg->src, MAX_TTL - myMsg->TTL);
+                  //dbg(ROUTING_CHANNEL, "Payload Array length is: %d \n", call RouteTable.size());
+                  match = FALSE;
+                  //Check for LSP and current node match
+                  // If node already has copy of LSP
+                  if(myMsg->src == TOS_NODE_ID){
+                    dbg(ROUTING_CHANNEL, "Match found. Dont Flood pack\n");
+                    // set flag = true
+                    match = TRUE;
+                  }
+                  // if our table IS empty; Initialize and push into our RouteTable
+                  if(call RouteTable.isEmpty()){
+                    temp.node = TOS_NODE_ID;
+                    temp.nextHop = TOS_NODE_ID;
+                    temp.seq = 0;
+                    temp.arrLength = call Neighbors.size();
+                    temp.cost = 0;
+                    for(i = 0; i< temp.arrLength; i++) {
+                      lspNeighbor = call Neighbors.get(i);
+                      temp.neighbors[i] = lspNeighbor.nodeID;
+                    }
+                    call RouteTable.pushfront(temp);
+                    //break;
+                    dbg(GENERAL_CHANNEL,"RouteTable size: %d\n",call RouteTable.size());
+                    dbg(GENERAL_CHANNEL,"msgTTL:%d, LSP cost:%d from:%d arrLen:%d\n", myMsg->TTL, LSP.cost, myMsg->src,LSP.arrLength);
+                  }
+                  // Else src is not current node 
+                  
+                  //else{
+                  if(myMsg->src != TOS_NODE_ID){
+                   // dbg(GENERAL_CHANNEL,"INSIDE IF(my->src != TOSNODE\n");
+                    LSP.node = myMsg->src;
+                    LSP.seq = myMsg->seq;
+                    //LSP.nextHop = myMsg->src; // not tos_node
+                    LSP.cost = MAX_TTL - myMsg->TTL; // Took this many life to get here
+                    //dbg(GENERAL_CHANNEL,"msgTTL:%d, LSP cost:%d from:%d\n",myMsg->TTL, LSP.cost, myMsg->src);
+                    i = 0;
+                    lsSize = 0;
+                    while(myMsg->payload[i] > 0){
+                      //dbg(GENERAL_CHANNEL,"INSIDE while 1 !!)\n");
+                      //Fill the LSP tables directly connected neighbors
+                      LSP.neighbors[i] = myMsg->payload[i];
+                      lsSize++;
+                      i++;
+                    }
+                    //LSP.nextHop = 0;
+                    LSP.arrLength = lsSize;
+
+                    if(!call RouteTable.isEmpty()){
+                    //dbg(GENERAL_CHANNEL,"INSIDE IF(!RT emptY)\n");
+
+                      while(!call RouteTable.isEmpty()) {
+                         //dbg(GENERAL_CHANNEL,"INSIDE WHILE 2 !!!\n");
+                        temp = call RouteTable.front();
+                        //dbg(GENERAL_CHANNEL,"INSIDE WHILE 2 !!!\n");
+                        // Check for most current LSP(cost)
+                        if((LSP.node == temp.node)&&(LSP.cost <= temp.cost)){
+                           //dbg(GENERAL_CHANNEL,"INSIDE IF COST CHECK\n");
+                          call RouteTable.popfront();  // Remove older LSP 
+                        }
+                        else if((LSP.node == temp.node) && (LSP.cost > temp.cost)){
+                          call tempLS.pushfront(call RouteTable.front());
+                          call RouteTable.popfront();
+                        }
+                        //dbg(GENERAL_CHANNEL,"INSIDE WHILE 2 !!!\n");
+                        else {
+                          //dbg(GENERAL_CHANNEL,"INSIDE ELSE CHECK \n");
+                          call tempLS.pushfront(call RouteTable.front());
+                          call RouteTable.popfront();
+                        }
+                      }
+                        
+                        while(!call tempLS.isEmpty()){
+                          //dbg(GENERAL_CHANNEL,"INSIDE WHILE 2 !!!\n");
+                          call RouteTable.pushfront(call tempLS.front());
+                          call tempLS.popfront();
+                        }
+                      
+                      /*
+                      i = 0;
+                      lsSize = 0;
+                      while(myMsg->payload[i] > 0){
+                        //Fill the LSP tables directly connected neighbors
+                        LSP.neighbors[i] = myMsg->payload[i];
+                        lsSize++;
+                        i++;
+                      }
+                      */
+                      
+                      //LSP.arrLength = lsSize;
+                      dbg(GENERAL_CHANNEL,"msgTTL:%d, LSP cost:%d from:%d arrLen:%d\n"
+                        ,myMsg->TTL, LSP.cost, myMsg->src,LSP.arrLength);                      
+                      call RouteTable.pushfront(LSP);
+                      //printLSP();
+                      seqNumber++;
+                      makePack(&sendPackage, myMsg->src, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_LINKSTATE,
+                        seqNumber, (uint8_t*)myMsg->payload, (uint8_t)sizeof(myMsg->payload));
+                      insertPack(sendPackage);
+                      call Sender.send(sendPackage,AM_BROADCAST_ADDR);
+
+                    }
+                    //If no match to protocol LINKSTATE
+                  /*
+                    -If no Match make; Make LSP table and flood it if node hasn't seen
+                    -If no match between packet src and TOS_ID
+                        ->then Unique nodeID for RouteTable
+                        ->Store and replace with lowest cost
+                  */
+                    if(!match){                    
+
+                    }
+
+
+                  }
+                  break;  // break Case LINKSTATE
+
                 // Default switch case; Break  
               default:
                   break;                   
@@ -427,7 +470,6 @@ implementation{
             if(myMsg->protocol == PROTOCOL_PINGREPLY) {
        //        dbg(FLOODING_CHANNEL, "PING REPLY RECEIVED FROM %d\n ",myMsg->src);
             }
-
 
          }
       
@@ -538,7 +580,7 @@ implementation{
 
    //Link State Pack Timer
    event void lspTimer.fired() {        
-      makeLSP();        
+     //makeLSP();        
    }   
    /* makeLSP()
     *  Check Neighbor List
@@ -550,14 +592,12 @@ implementation{
       //Neighbor temp;
       //uint16_t size = (call NeighborList.size()) + 1;
      // uint16_t linkedNeighbors[size];
-      // DO NEIGHBOR STUFF BELOW
       
         uint16_t i = 0;       
         Neighbor temp;
         uint16_t size = call Neighbors.size();
         uint16_t linkedNeighbors [size +1];
-        if(!call Neighbors.isEmpty()) 
-        {
+        if(!call Neighbors.isEmpty()){
           for (i = 0; i < size; i++) 
           {
             temp = call Neighbors.get(i);
@@ -565,18 +605,17 @@ implementation{
           }
           linkedNeighbors[size] =0;
 
-
      // Make our LSP packet and flood it through Broadcast
      //Current,TTL20,LINKSTATE prot, payload = array
-     makePack(&LSP,TOS_NODE_ID,AM_BROADCAST_ADDR,MAX_TTL - 1,PROTOCOL_LINKSTATE,seqNumber++,
+     makePack(&LSP,TOS_NODE_ID,AM_BROADCAST_ADDR,20,PROTOCOL_LINKSTATE,seqNumber++,
         (uint8_t*) linkedNeighbors,(uint16_t) sizeof(linkedNeighbors));
      //push pack into our pack list
      //   - May need to check isKnown for seen LSP packs later/ or make new function
      insertPack(LSP);
      call Sender.send(LSP,AM_BROADCAST_ADDR);
-     dbg(ROUTING_CHANNEL, "Node %d has been flooded\n",TOS_NODE_ID);
-}
-}
+     //dbg(ROUTING_CHANNEL, "LSPNode %d has been flooded\n",TOS_NODE_ID);
+      }
+  }
 
 // THINK THIS CAN GO IN DMP LINKSTATE
  void printLSP(){
