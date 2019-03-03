@@ -44,13 +44,14 @@ typedef nx_struct Neighbor {
  * - Cost
  * - Next
  */
-typedef nx_struct LinkState {
+typedef struct LinkState {
     nx_uint16_t neighbors[64]; // current list of neighbors
     nx_uint16_t arrLength;
     nx_uint16_t node; // Dest?
     nx_uint16_t cost; 
     nx_uint16_t seq;
     nx_uint16_t nextHop;
+    bool isValid;
     }LinkState;
 
 
@@ -101,7 +102,8 @@ implementation{
 
    // ---------Project 2 ------------//
    void makeLSP();
-   void dijkstra();
+   //void dijkstra();
+    void Dijkstra(uint8_t Destination, uint8_t Cost, uint8_t NextHop);
    void printLSP();
    
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
@@ -188,14 +190,13 @@ implementation{
           makeLSP();
         }
         //makeLSP(); 
-        if(lspCount > 1 && lspCount % 20 == 0 && lspCount < 61){}
-          dijkstra();        
-
+        if(lspCount > 1 && lspCount % 20 == 0 && lspCount < 61){
+            Dijkstra(TOS_NODE_ID, 0, TOS_NODE_ID);        
+            }
         /*
         if(lspCount < 17 && lspCount %3 == 2 && lspCount > 1){
           makeLSP();
         }
-
         if(lspCount == 17)
           dijkstra();
         */           
@@ -707,9 +708,7 @@ implementation{
       uint16_t distance[MAXNODE];
       bool isValid;
       min= INFINITY;
-
       dbg(ROUTING_CHANNEL, "DIJKSTA -----");
-
       //int cost[MAXNODE][MAXNODE];
       uint16_t confirmedlist[MAXNODE];
       uint16_t tentativelist[MAXNODE];
@@ -726,7 +725,6 @@ implementation{
         tentativelist.isValid= FALSE;
         tentativelist.Cost[i] = INFINITY;
        }
-
        //For the node just added to the Confirmed list in the previous step, call it node Next and select its LSP
         next= TOS_NODE_ID-1;
         ConfrimedNode.node = Destination;
@@ -735,7 +733,6 @@ implementation{
         ConfirmedNode.isValid = TRUE;
         //confirmedlist[next] = ConfirmedNode;
         call Confrimed.pushfront(ConfirmedNode);   
-
         if(Destination != TOS_NODE_ID){
           for(i =0; i< call RouteTable.size(); i++){
             NextNode = call RouteTable.get(i);
@@ -749,7 +746,6 @@ implementation{
                     tentativelist.isValid= TRUE;
                     call Tentative.pushfront(TentativeNode);
                 }
-
                 // b. If Neighbor is currently on Tentative list and Cost is less then currently less than the currently listed cost
                 //    for Neighbor, then replace the current entry with (Neighbor, Cost, Nexthop)
                       //where nexthop is the direction I go to reach Next
@@ -785,10 +781,9 @@ implementation{
         ConfirmedNode.isValid = TRUE;
         //confirmedlist[next] = ConfirmedNode;
         call Confrimed.pushfront(ConfirmedNode);   
-
           }
         }
     */
 
 
-    }
+}
