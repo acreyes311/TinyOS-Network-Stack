@@ -44,14 +44,13 @@ typedef nx_struct Neighbor {
  * - Cost
  * - Next
  */
-typedef struct LinkState { //nx_struct
+typedef nx_struct LinkState {
     nx_uint16_t neighbors[64]; // current list of neighbors
     nx_uint16_t arrLength;
     nx_uint16_t node; // Dest?
     nx_uint16_t cost; 
     nx_uint16_t seq;
     nx_uint16_t nextHop;
-    bool isValid; // struct
     }LinkState;
 
 
@@ -102,8 +101,7 @@ implementation{
 
    // ---------Project 2 ------------//
    void makeLSP();
-   //void dijkstra();
-   void Dijkstra(uint8_t Destination, uint8_t cost, uint8_t NextHop);
+   void dijkstra();
    void printLSP();
    
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
@@ -191,7 +189,7 @@ implementation{
         }
         //makeLSP(); 
         if(lspCount > 1 && lspCount % 20 == 0 && lspCount < 61){}
-          //dijkstra();        
+          dijkstra();        
 
         /*
         if(lspCount < 17 && lspCount %3 == 2 && lspCount > 1){
@@ -199,7 +197,7 @@ implementation{
         }
 
         if(lspCount == 17)
-          void Dijkstra(TOS_NODE_ID, 0, TOS_NODE_ID);();
+          dijkstra();
         */           
    }
 
@@ -634,14 +632,13 @@ implementation{
     }
     dbg(GENERAL_CHANNEL, "RouteTable size is %d\n", call RouteTable.size());
   }
-  
-   void Dijkstra(uint8_t Destination, uint8_t Cost, uint8_t NextHop)
+ void Dijkstra(uint8_t Destination, uint8_t Cost, uint8_t NextHop)
     {
       uint16_t i, j, k, l;
       LinkState ConfirmedNode, TentativeNode,  NextNode, Confirmedgray, tentativeshorter, Confirmedblack;
       //bool isValid;
 
-      dbg(ROUTING_CHANNEL, "DIJKSTA -----");
+      dbg(ROUTING_CHANNEL, "DIJKSTRA -----\n");
      //1. initialize the confirmed list with an empty for myself
      //entry has a cost of 0
       //set unchecked node distance to infinity
@@ -698,9 +695,8 @@ implementation{
               dbg(ROUTING_CHANNEL, "Dest: %d,  Cost: %d ,  Next: %d \n",  Confirmedblack.node, Confirmedblack.cost, Confirmedblack.nextHop);
           }
 
-        }
-  
-  
+}
+
     /*void Dijkstra(uint8_t Destination, uint8_t Cost, uint8_t NextHop)
     {
       uint16_t i, j;
