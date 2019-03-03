@@ -406,8 +406,8 @@ implementation{
                   }//break;  // break Case LINKSTATE // END PROTOCOL LINKSTATE
                 
             } // END BROADCAST
-
-
+            
+//////// DOESNT ENTER BELOW //////////////////
          else if(myMsg->dest == TOS_NODE_ID && myMsg->protocol == PROTOCOL_PING )//|| myMsg->protocol == PROTOCOL_PINGREPLY)) 
          {
             dbg(FLOODING_CHANNEL,"Packet #%d arrived from %d with payload: %s\n", myMsg->seq, myMsg->src, myMsg->payload);
