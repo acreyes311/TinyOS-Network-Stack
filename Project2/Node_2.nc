@@ -186,20 +186,21 @@ implementation{
    event void periodicTimer.fired() {
         // dbg(GENERAL_CHANNEL, "Call to neighborList()\n");
         neighborList();
-        if(lspCount > 1 && lspCount % 3 == 0 && lspCount < 16){
-          makeLSP();
-        }
+       // makeLSP();
+       // if(lspCount > 1 && lspCount % 3 == 0 && lspCount < 16){
+       //   makeLSP();
+      //  }
         //makeLSP(); 
-        if(lspCount > 1 && lspCount % 20 == 0 && lspCount < 61){
-            Dijkstra(TOS_NODE_ID, 0, TOS_NODE_ID);        
-            }
-        /*
+        //if(lspCount > 1 && lspCount % 20 == 0 && lspCount < 61){
+        //    Dijkstra(TOS_NODE_ID, 0, TOS_NODE_ID);        
+        //    }
+        
         if(lspCount < 17 && lspCount %3 == 2 && lspCount > 1){
           makeLSP();
         }
         if(lspCount == 17)
           Dijkstra(TOS_NODE_ID, 0, TOS_NODE_ID);
-        */           
+                  
    }
 
 
@@ -253,11 +254,10 @@ implementation{
                   makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
                   insertPack(sendPackage); // Insert pack into our list
                   call Sender.send(sendPackage, myMsg->src);  // Send with pingreply protocol
-                  }//break;
-               
+                  }
               // PROTOCOL_PINGREPLY SWITCH CASE /               
                 //case PROTOCOL_PINGREPLY:                  
-                 else if(PROTOCOL_PINGREPLY == myMsg->protocol){
+                 if(PROTOCOL_PINGREPLY == myMsg->protocol){
                   size = call Neighbors.size(); // get size from our List of Neighbors
                   flag = FALSE;  //  Set to true only when neighbor is found
 
@@ -307,7 +307,7 @@ implementation{
                   ->most recent LSP eventually reaches all nodes
                 */
                 //case PROTOCOL_LINKSTATE:                          
-                else if(PROTOCOL_LINKSTATE == myMsg->protocol){
+                if(PROTOCOL_LINKSTATE == myMsg->protocol){
                  // dbg(ROUTING_CHANNEL, "Node: %d successfully received an LSP Packet from Node %d! Cost: %d \n", TOS_NODE_ID, myMsg->src, MAX_TTL - myMsg->TTL);
                   //dbg(ROUTING_CHANNEL, "Payload Array length is: %d \n", call RouteTable.size());
                   match = FALSE;
@@ -406,16 +406,16 @@ implementation{
                   }//break;  // break Case LINKSTATE // END PROTOCOL LINKSTATE
                 
             } // END BROADCAST
-            
-//////// DOESNT ENTER BELOW //////////////////
-         else if(myMsg->dest == TOS_NODE_ID && myMsg->protocol == PROTOCOL_PING )//|| myMsg->protocol == PROTOCOL_PINGREPLY)) 
+
+
+         else if(myMsg->dest == TOS_NODE_ID) //|| myMsg->protocol == PROTOCOL_PINGREPLY)) 
          {
             dbg(FLOODING_CHANNEL,"Packet #%d arrived from %d with payload: %s\n", myMsg->seq, myMsg->src, myMsg->payload);
             // dont push PROTOCOL_CMD into list, will not allow same node to send multiple pings
-
-          //  if(myMsg->protocol != PROTOCOL_CMD) {
-              // insertPack(*myMsg); // push non protol_cmd into packet list
-           // }
+           if(myMsg->protocol != PROTOCOL_CMD) {
+               insertPack(*myMsg); // push non protol_cmd into packet list
+            }
+            if( myMsg->protocol == PROTOCOL_PING ){
 
             /////BEGIN CHECKING FLOODING PROTOCOLS////
 
@@ -442,11 +442,11 @@ implementation{
             }
 
             // PROTOCOL PINGREPLY: Packet at correct destination; Stop sending packet
-            else if(myMsg->dest == TOS_NODE_ID && myMsg->protocol == PROTOCOL_PINGREPLY) {
+            if(myMsg->protocol == PROTOCOL_PINGREPLY) {
                dbg(FLOODING_CHANNEL, "PING REPLY RECEIVED FROM %d\n ",myMsg->src);
             }
 
-         //}
+         }
       
          // Packet does not belong to current node 
          // Flood Packet with TTL - 1
@@ -482,7 +482,7 @@ implementation{
     uint16_t i;
     LinkState ls;
     uint16_t dest;
-     dbg(GENERAL_CHANNEL, "PING EVENT____________________________________ \n");
+     dbg(GENERAL_CHANNEL, "PING EVENT \n");
       for (i = 0; i < call Confirmed.size(); i++){
         ls = call Confirmed.get(i);
         if(ls.node == destination){
@@ -492,9 +492,9 @@ implementation{
       }
       //sendPackage.seq = sendPackage.seq + 1;
       //makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, sendPackage.seq, payload, PACKET_MAX_PAYLOAD_SIZE);
-      makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, seqNumber, payload, PACKET_MAX_PAYLOAD_SIZE);
-      call Sender.send(sendPackage, dest); 
-      seqNumber = seqNumber + 1;
+      makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, ++seqNumber, payload, PACKET_MAX_PAYLOAD_SIZE);
+      call Sender.send(sendPackage, dest); // send to destination
+      //seqNumber = seqNumber + 1;
       
    }
 
@@ -528,10 +528,10 @@ implementation{
       uint16_t i =0;
       //uint16_t size;
       //size = call Confirmed.size();
-      dbg(ROUTING_CHANNEL, "ROUTING Channel\n");
+      dbg(ROUTING_CHANNEL, "Print Route of node:%d\n",TOS_NODE_ID);
       for(i =0; i < call Confirmed.size(); i++){
             routing=  call Confirmed.get(i);
-            dbg(ROUTING_CHANNEL, "--The Destination is %d\n  | The Cost is : %d\n  |  The next rout is %d\n", routing.node, routing.cost, routing.nextHop); //add i 
+            dbg(ROUTING_CHANNEL, "--The Destination is %d\n  | The Cost is : %d\n  |  The next hop is %d\n", routing.node, routing.cost, routing.nextHop); //add i 
       }
    }
 
@@ -575,7 +575,7 @@ implementation{
 
    //Link State Pack Timer
    event void lspTimer.fired() {        
-     //makeLSP();        
+     makeLSP();        
    }   
    /* makeLSP()
     *  Check Neighbor List
@@ -602,7 +602,7 @@ implementation{
 
      // Make our LSP packet and flood it through Broadcast
      //Current,TTL20,LINKSTATE prot, payload = array
-     makePack(&LSP,TOS_NODE_ID,AM_BROADCAST_ADDR,20,PROTOCOL_LINKSTATE,seqNumber++,
+     makePack(&LSP,TOS_NODE_ID,AM_BROADCAST_ADDR,MAX_TTL-1,PROTOCOL_LINKSTATE,seqNumber++,
         (uint8_t*) linkedNeighbors,(uint16_t) sizeof(linkedNeighbors));
      //push pack into our pack list
      //   - May need to check isKnown for seen LSP packs later/ or make new function
@@ -612,7 +612,7 @@ implementation{
       }
   }
 
-// THINK THIS CAN GO IN DMP LINKSTATE
+/*
  void printLSP(){
     LinkState lsp;
     uint16_t i,j;
@@ -629,7 +629,7 @@ implementation{
     }
    // dbg(GENERAL_CHANNEL, "RouteTable size is %d\n", call RouteTable.size());
   }
-
+*/
  void Dijkstra(uint8_t Destination, uint8_t Cost, uint8_t NextHop)
     {
       uint16_t i, j, k, l;
