@@ -44,13 +44,14 @@ typedef nx_struct Neighbor {
  * - Cost
  * - Next
  */
-typedef nx_struct LinkState {
+typedef struct LinkState { //nx_struct
     nx_uint16_t neighbors[64]; // current list of neighbors
     nx_uint16_t arrLength;
     nx_uint16_t node; // Dest?
     nx_uint16_t cost; 
     nx_uint16_t seq;
     nx_uint16_t nextHop;
+    bool isValid; // struct
     }LinkState;
 
 
@@ -101,7 +102,8 @@ implementation{
 
    // ---------Project 2 ------------//
    void makeLSP();
-   void dijkstra();
+   //void dijkstra();
+   void Dijkstra(uint8_t Destination, uint8_t cost, uint8_t NextHop);
    void printLSP();
    
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
@@ -197,7 +199,7 @@ implementation{
         }
 
         if(lspCount == 17)
-          dijkstra();
+          void Dijkstra(TOS_NODE_ID, 0, TOS_NODE_ID);();
         */           
    }
 
@@ -632,6 +634,73 @@ implementation{
     }
     dbg(GENERAL_CHANNEL, "RouteTable size is %d\n", call RouteTable.size());
   }
+  
+   void Dijkstra(uint8_t Destination, uint8_t Cost, uint8_t NextHop)
+    {
+      uint16_t i, j, k, l;
+      LinkState ConfirmedNode, TentativeNode,  NextNode, Confirmedgray, tentativeshorter, Confirmedblack;
+      //bool isValid;
+
+      dbg(ROUTING_CHANNEL, "DIJKSTA -----");
+     //1. initialize the confirmed list with an empty for myself
+     //entry has a cost of 0
+      //set unchecked node distance to infinity
+       //For the node just added to the Confirmed list in the previous step, call it node Next and select its LSP
+       // next= TOS_NODE_ID-1;
+        ConfirmedNode.node = Destination; // destination = TOS_NODE_ID
+        ConfirmedNode.cost = Cost; // cost =0
+        ConfirmedNode.nextHop= NextHop; // NextHop = TOS_NODE_ID
+        //ConfirmedNode.isValid = TRUE;
+        //confirmedlist[next] = ConfirmedNode;
+        call Confirmed.pushfront(ConfirmedNode);   
+
+        if(ConfirmedNode.node != TOS_NODE_ID){
+          for(i =0; i< call RouteTable.size(); i++){
+            NextNode = call RouteTable.get(i);
+            if(NextNode.node == Destination){
+                for(j = 0; j< NextNode.arrLength; j++){
+                  // If Neighbor is currently on neither the Confirmed nor tentative list
+                  //then add (Neighbor, Cost, nexthop) to the tentative list where NextHop is the direction I go reach Next
+                  if(NextNode.neighbors[j]>0){
+                    ConfirmedNode.isValid = FALSE;
+                    TentativeNode.isValid= FALSE;
+
+                    while(! call Tentative.isEmpty())
+                    {
+                        for(k= 0; k< NextNode.arrLength; k++){
+                          NextNode= call Tentative.get(i);
+                          //If Neighbor is currently on Tentative list
+                          if(NextNode.node == NextNode.neighbors[k]){
+                             TentativeNode.isValid= TRUE; 
+                          ////Cost is less then currently less than the currently listed cost
+                              if(Confirmedgray.cost > NextNode.cost){
+                          //for Neighbor, then replace the current entry with (Neighbor, Cost, Nexthop)
+                         //where nexthop is the direction I go to reach Next
+                                tentativeshorter = call Tentative.remove(k);
+                                tentativeshorter.cost= NextNode.cost;
+                                tentativeshorter.nextHop= NextNode.nextHop;
+                                call Tentative.pushfront(tentativeshorter);
+                                TentativeNode.isValid= TRUE;
+
+                              }
+                          }
+                        }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          dbg(ROUTING_CHANNEL, "ROUTING Table \n");
+          for(l = 0; l < call Confirmed.size(); l++)
+          {
+              Confirmedblack = call Confirmed.get(l);
+              dbg(ROUTING_CHANNEL, "Dest: %d,  Cost: %d ,  Next: %d \n",  Confirmedblack.node, Confirmedblack.cost, Confirmedblack.nextHop);
+          }
+
+        }
+  
+  
     /*void Dijkstra(uint8_t Destination, uint8_t Cost, uint8_t NextHop)
     {
       uint16_t i, j;
