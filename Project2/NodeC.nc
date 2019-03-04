@@ -67,6 +67,9 @@ implementation {
     components new ListC(LinkState,64) as tempLSC;
     Node.tempLS -> tempLSC;
 
+    components new HashmapC(int, 64) as tablerouteC;
+    Node.tableroute -> tablerouteC;
+
     components new TimerMilliC() as lspTimerC;
     Node.lspTimer -> lspTimerC;
 
