@@ -44,14 +44,13 @@ typedef nx_struct Neighbor {
  * - Cost
  * - Next
  */
-typedef struct LinkState {
+typedef nx_struct LinkState {
     nx_uint16_t neighbors[64]; // current list of neighbors
     nx_uint16_t arrLength;
     nx_uint16_t node; // Dest?
     nx_uint16_t cost; 
     nx_uint16_t seq;
     nx_uint16_t nextHop;
-    bool isValid;
     }LinkState;
 
 
