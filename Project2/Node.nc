@@ -81,6 +81,8 @@ module Node{
    uses interface List<LinkState> as RouteTable;
    uses interface List<LinkState> as routeTemp;
    uses interface List<LinkState> as tempLS;
+   uses interface Hashmap<int> as tableroute;
+   
    // New Timer for LSP 
    uses interface Timer<TMilli> as lspTimer; // fires and call function to create LSP packet
 
@@ -102,8 +104,7 @@ implementation{
 
    // ---------Project 2 ------------//
    void makeLSP();
-   //void dijkstra();
-    void Dijkstra(uint8_t Destination, uint8_t Cost, uint8_t NextHop);
+   void Dijkstra();
    void printLSP();
    
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
@@ -191,7 +192,7 @@ implementation{
         }
         //makeLSP(); 
         if(lspCount > 1 && lspCount % 20 == 0 && lspCount < 61){
-            Dijkstra(TOS_NODE_ID, 0, TOS_NODE_ID);        
+           Dijkstra();       
             }
         /*
         if(lspCount < 17 && lspCount %3 == 2 && lspCount > 1){
@@ -534,6 +535,7 @@ implementation{
       uint16_t i =0;
       //uint16_t size;
       //size = call Confirmed.size();
+      Dijkstra();
       dbg(ROUTING_CHANNEL, "ROUTING Channel\n");
       for(i =0; i < call Confirmed.size(); i++){
             routing=  call Confirmed.get(i);
@@ -633,157 +635,79 @@ implementation{
     }
     dbg(GENERAL_CHANNEL, "RouteTable size is %d\n", call RouteTable.size());
   }
- void Dijkstra(uint8_t Destination, uint8_t Cost, uint8_t NextHop)
-    {
-      uint16_t i, j, k, l;
-      LinkState ConfirmedNode, TentativeNode,  NextNode, Confirmedgray, tentativeshorter, Confirmedblack;
-      //bool isValid;
+  void Dijkstra(){
+    uint16_t size = call RouteTable.size();
+    uint16_t sizenode[MAX];
+    uint16_t i, j, next, Cost[MAX][MAX], distance[MAX], gray[MAX], list[MAX], count, path, Next1, nextnode;
+    uint16_t mynode =TOS_NODE_ID-1;
+    bool isValid[MAX][MAX];
+    LinkState nextnode1, nextnode2;
+    
+    for(i =0 ; i< MAX; i++){
+      for(j= 0; j< MAX; j++){
+        isValid[i][j]= FALSE;
+      }
+    }
+   for(i = 0; i< MAX; i++){
+    nextnode1 = call RouteTable.get(i);
+    for(j = 0; j< MAX; j++){
+      if(isValid[i][j]== FALSE){
+        Cost[i][j]  = INFINITY;
+      }
+      else{
+        Cost[i][j] = 1;
+      }
+    }
+   }
 
-      dbg(ROUTING_CHANNEL, "DIJKSTRA -----\n");
-     //1. initialize the confirmed list with an empty for myself
-     //entry has a cost of 0
-      //set unchecked node distance to infinity
-       //For the node just added to the Confirmed list in the previous step, call it node Next and select its LSP
-       // next= TOS_NODE_ID-1;
-        ConfirmedNode.node = Destination; // destination = TOS_NODE_ID
-        ConfirmedNode.cost = Cost; // cost =0
-        ConfirmedNode.nextHop= NextHop; // NextHop = TOS_NODE_ID
-        //ConfirmedNode.isValid = TRUE;
-        //confirmedlist[next] = ConfirmedNode;
-        call Confirmed.pushfront(ConfirmedNode);   
+   for(i = 0; i < MAX ; i++){
+      distance[i] = Cost[mynode][i];
+      list[i] = mynode;
+      gray[i] =0;
+   }
+   distance[mynode]= 0;
+   gray[mynode] =1;
+   count =1;
 
-        if(ConfirmedNode.node != TOS_NODE_ID){
-          for(i =0; i< call RouteTable.size(); i++){
-            NextNode = call RouteTable.get(i);
-            if(NextNode.node == Destination){
-                for(j = 0; j< NextNode.arrLength; j++){
-                  // If Neighbor is currently on neither the Confirmed nor tentative list
-                  //then add (Neighbor, Cost, nexthop) to the tentative list where NextHop is the direction I go reach Next
-                  if(NextNode.neighbors[j]>0){
-                    ConfirmedNode.isValid = FALSE;
-                    TentativeNode.isValid= FALSE;
-
-                    while(! call Tentative.isEmpty())
-                    {
-                        for(k= 0; k< NextNode.arrLength; k++){
-                          NextNode= call Tentative.get(i);
-                          //If Neighbor is currently on Tentative list
-                          if(NextNode.node == NextNode.neighbors[k]){
-                             TentativeNode.isValid= TRUE; 
-                          ////Cost is less then currently less than the currently listed cost
-                              if(Confirmedgray.cost > NextNode.cost){
-                          //for Neighbor, then replace the current entry with (Neighbor, Cost, Nexthop)
-                         //where nexthop is the direction I go to reach Next
-                                tentativeshorter = call Tentative.remove(k);
-                                tentativeshorter.cost= NextNode.cost;
-                                tentativeshorter.nextHop= NextNode.nextHop;
-                                call Tentative.pushfront(tentativeshorter);
-                                TentativeNode.isValid= TRUE;
-
-                              }
-                          }
-                        }
-                    }
-                  }
-                }
-              }
-            }
-          }
-          dbg(ROUTING_CHANNEL, "ROUTING Table \n");
-          for(l = 0; l < call Confirmed.size(); l++)
-          {
-              Confirmedblack = call Confirmed.get(l);
-              dbg(ROUTING_CHANNEL, "Dest: %d,  Cost: %d ,  Next: %d \n",  Confirmedblack.node, Confirmedblack.cost, Confirmedblack.nextHop);
-          }
-
-}
-
-    /*void Dijkstra(uint8_t Destination, uint8_t Cost, uint8_t NextHop)
-    {
-      uint16_t i, j;
-      uint8_t next;
-      uint8_t path;
-      uint8_t min; // =INFINITY;
-      uint16_t size;
-      uint16_t distance[MAXNODE];
-      bool isValid;
-      min= INFINITY;
-      dbg(ROUTING_CHANNEL, "DIJKSTA -----");
-      //int cost[MAXNODE][MAXNODE];
-      uint16_t confirmedlist[MAXNODE];
-      uint16_t tentativelist[MAXNODE];
-      LinkState ConfirmedNode, TentativeNode,  NextNode; // VisitConfirm, VisitTentative;
-      Neighbor nearNeighbors;
-      //size = call RouteTable.size();
-     //1. initialize the confirmed list with an empty for myself
-     //entry has a cost of 0
-      //set unchecked node distance to infinity
-      for( i= 0; i <call RouteTable.size(); i++){
-        confirmedlist.Cost[i] = INFINITY;
-        tentativelist.Cost[i] = INFINITY;
-        confirmedlist.isValid= FALSE;
-        tentativelist.isValid= FALSE;
-        tentativelist.Cost[i] = INFINITY;
-       }
-       //For the node just added to the Confirmed list in the previous step, call it node Next and select its LSP
-        next= TOS_NODE_ID-1;
-        ConfrimedNode.node = Destination;
-        ConfirmedNode.Cost = 0;
-        ConfirmedNode.nextHop= NextHop;
-        ConfirmedNode.isValid = TRUE;
-        //confirmedlist[next] = ConfirmedNode;
-        call Confrimed.pushfront(ConfirmedNode);   
-        if(Destination != TOS_NODE_ID){
-          for(i =0; i< call RouteTable.size(); i++){
-            NextNode = call RouteTable.get(i);
-            if(NextNode.node = Destination){
-              //3. 
-              //  a. If Neighbor is currently on neither the Confirmed nor tentative list
-              //then add (Neighbor, Cost, nexthop) to the tentative list where NextHop is the direction I go reach Next
-                if(confirmedlist[i].isValid == FALSE && tentativelist[i].isValid == FALSE){
-                    TentativeNode.node = i+1;
-                    TentativeNode.nextHop= path;
-                    tentativelist.isValid= TRUE;
-                    call Tentative.pushfront(TentativeNode);
-                }
-                // b. If Neighbor is currently on Tentative list and Cost is less then currently less than the currently listed cost
-                //    for Neighbor, then replace the current entry with (Neighbor, Cost, Nexthop)
-                      //where nexthop is the direction I go to reach Next
-                 if(tentativelist[i].isValid == FALSE && TentativeNode.Cost < tentativelist[i]){
-                    TentativeNode.node = i+1;
-                    TentativeNode.nextHop= path;
-                    tentativelist.isValid= TRUE;
-                    call Tentative.pushfront(TentativeNode);
-                }
-              }
-            }
-          }
-          //4
-          //if the tentative is empty then stop
-          if(call Tentative.isEmpty()){
-            return;
-          }
-          //if the tentative isn't empty then pick the empty from Tentative list with the lowest Cost
-          if(!(call Tentative.isEmpty()))
-          {
-            for(i =0 ; i< call RouteTable.size(); i++){
-              if(tentativelist[i].isValid==FALSE && tentativelist[i].Cost < min ){
-                min =tentativelist[i].Cost;
-                j= i;
-              }
-            }
-          //  return j;
-         // moved to Confirmed List 
-         //(move lowest Cost from Tentative list to Confrimed List)
-        ConfrimedNode.node = tentativelist[next].node;
-        ConfirmedNode.Cost = tentativelist[next].Cost;
-        ConfirmedNode.nextHop= tentativelist[next].nextHop;
-        ConfirmedNode.isValid = TRUE;
-        //confirmedlist[next] = ConfirmedNode;
-        call Confrimed.pushfront(ConfirmedNode);   
+   while( count < MAX -1){
+      path= INFINITY;
+      for(i =0; i< MAX; i++){
+        if(distance[i] <= path  && gray[i]==0){
+          path = distance[i];
+          Next1 = i;
+        }
+      }
+      gray[next] = 1;
+      for(i =0 ; i< MAX ; i++){
+        if(gray[i]==0){
+          if(path + Cost[Next1][i] < distance[i]){
+            distance[i] = path + Cost[Next1][i];
+            list[i] = Next1;
           }
         }
-    */
+      }
+      count++;
+   }
+   for(i = 0; i< MAX; i++){
+    nextnode = TOS_NODE_ID;
+    if(distance[i] != INFINITY){
+      if(i != mynode){
+        j= i;
+        while(j != mynode){
+          if(j!= mynode){
+            nextnode = j;
+          }
+          j =list[i];
+        }
+      }else{
+        nextnode = mynode;
+      }
+      if(nextnode != 0){
+          call tableroute.insert(i , nextnode);
+      }
+    }
+   }
+  }    
 
 
 }
