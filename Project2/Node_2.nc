@@ -14,7 +14,8 @@
 #include "includes/CommandMsg.h"
 #include "includes/sendInfo.h"
 #include "includes/channels.h"
-
+#define INFINITY 999999
+#define MAX 20
 /*  TODO
  * - Figure out how to use LinkState struct
  *      - Maybe once inside receive protocol_linkstate we can see what we need?
@@ -83,6 +84,7 @@ module Node{
    //uses interface List<LinkState> as routeTemp;
    // New Timer for LSP 
    uses interface Timer<TMilli> as lspTimer; // fires and call function to create LSP packet
+   uses interface Hashmap<int> as tableroute;
 
 }
 
@@ -102,8 +104,8 @@ implementation{
  
    // ---------Project 2 ------------//
    void makeLSP();
-   //void dijkstra();
-   void Dijkstra(uint8_t Destination, uint8_t Cost, uint8_t NextHop);
+   void Dijkstra();
+   //void Dijkstra(uint8_t Destination, uint8_t Cost, uint8_t NextHop);
    void printLSP();
    
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
@@ -187,6 +189,7 @@ implementation{
         // dbg(GENERAL_CHANNEL, "Call to neighborList()\n");
         neighborList();
        // makeLSP();
+        //Dijkstra();
        // if(lspCount > 1 && lspCount % 3 == 0 && lspCount < 16){
        //   makeLSP();
       //  }
@@ -199,7 +202,8 @@ implementation{
           makeLSP();
         }
         if(lspCount == 17)
-          Dijkstra(TOS_NODE_ID, 0, TOS_NODE_ID);
+          Dijkstra();
+          //Dijkstra(TOS_NODE_ID, 0, TOS_NODE_ID);
                   
    }
 
@@ -245,19 +249,28 @@ implementation{
          if(isKnown(myMsg)) {
    //         dbg(FLOODING_CHANNEL,"Already seen PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
          }
-         
+         //changed else if
          // Neighbor Discovery or LSP entry
        if(AM_BROADCAST_ADDR == myMsg->dest) {            
+   //       dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d\n", myMsg->src);
+            // What protocol does the message contain
+           switch(myMsg->protocol) {
 
-               if(PROTOCOL_PING == myMsg->protocol){
-               
+                //PROTOCOL_PING SWITCH CASE //
+                // repackage with TTL-1 and PING_REPLY PROTOCOL
+               case PROTOCOL_PING:
+                  //dbg(GENERAL_CHANNEL, "myMsg->Protocol %d\n", myMsg->protocol);                  
+                 // dbg(NEIGHBOR_CHANNEL, "Packet from %d searching for neighbors\n",myMsg->src);
+                 // makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, sizeof(myMsg->payload));
                   makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
                   insertPack(sendPackage); // Insert pack into our list
                   call Sender.send(sendPackage, myMsg->src);  // Send with pingreply protocol
-                  }
-              // PROTOCOL_PINGREPLY SWITCH CASE /               
-                //case PROTOCOL_PINGREPLY:                  
-                 if(PROTOCOL_PINGREPLY == myMsg->protocol){
+                  break;
+               
+              // PROTOCOL_PINGREPLY SWITCH CASE //
+               
+                case PROTOCOL_PINGREPLY:                  
+                 
                   size = call Neighbors.size(); // get size from our List of Neighbors
                   flag = FALSE;  //  Set to true only when neighbor is found
 
@@ -270,7 +283,7 @@ implementation{
                        
                         TempNeighbor.life = 0;
                         flag = TRUE;
-                        //break;
+                        break;
                      }
                      //dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d\n", myMsg->src);
                   }
@@ -296,7 +309,7 @@ implementation{
                  }
                 }
 
-                }//break;
+                  break;
             // ---------------- PROJECT 2 -------------------//
                 // Go here After flooding LSP/ calculate route
                 /*  Linkstate Protocol
@@ -306,8 +319,8 @@ implementation{
                   If received LSP is newest, send that copy to all its neighbors and they do same
                   ->most recent LSP eventually reaches all nodes
                 */
-                //case PROTOCOL_LINKSTATE:                          
-                if(PROTOCOL_LINKSTATE == myMsg->protocol){
+                case PROTOCOL_LINKSTATE:                          
+                 
                  // dbg(ROUTING_CHANNEL, "Node: %d successfully received an LSP Packet from Node %d! Cost: %d \n", TOS_NODE_ID, myMsg->src, MAX_TTL - myMsg->TTL);
                   //dbg(ROUTING_CHANNEL, "Payload Array length is: %d \n", call RouteTable.size());
                   match = FALSE;
@@ -322,7 +335,7 @@ implementation{
                   if(call RouteTable.isEmpty()){
                     temp.node = TOS_NODE_ID;
                     temp.nextHop = TOS_NODE_ID;
-                    temp.seq = 0;
+                    temp.seq = myMsg->seq;
                     temp.arrLength = call Neighbors.size();
                     temp.cost = 0;
                     for(i = 0; i< temp.arrLength; i++) {
@@ -339,9 +352,9 @@ implementation{
                    // dbg(GENERAL_CHANNEL,"INSIDE IF(my->src != TOSNODE\n");
                     LSP.node = myMsg->src;
                     LSP.seq = myMsg->seq;
-                    //LSP.nextHop = myMsg->src; // not tos_node
+                    ///////////LSP.nextHop = myMsg->src; // not tos_node
                     LSP.cost = MAX_TTL - myMsg->TTL; // Took this many life to get here
-                    //dbg(GENERAL_CHANNEL,"msgTTL:%d, LSP cost:%d from:%d\n",myMsg->TTL, LSP.cost, myMsg->src);
+                   // dbg(GENERAL_CHANNEL,"msgTTL:%d, LSP cost:%d from:%d\n",myMsg->TTL, LSP.cost, myMsg->src);
                     i = 0;
                     lsSize = 0;
                     while(myMsg->payload[i] > 0){
@@ -362,11 +375,11 @@ implementation{
                         temp = call RouteTable.front();
                         //dbg(GENERAL_CHANNEL,"INSIDE WHILE 2 !!!\n");
                         // Check for most current LSP(cost)
-                        if((LSP.node == temp.node)&&(LSP.cost <= temp.cost)){
+                        if((LSP.node == temp.node)&&(LSP.cost < temp.cost) &&(LSP.seq>=temp.seq)){
                            //dbg(GENERAL_CHANNEL,"INSIDE IF COST CHECK\n");
                           call RouteTable.popfront();  // Remove older LSP 
                         }
-                        else if((LSP.node == temp.node) && (LSP.cost > temp.cost)){
+                        else if((LSP.node == temp.node) && (LSP.cost > temp.cost)&&(LSP.seq>=temp.seq)){
                           call routeTemp.pushfront(call RouteTable.front());
                           call RouteTable.popfront();
                         }
@@ -382,7 +395,8 @@ implementation{
                           //dbg(GENERAL_CHANNEL,"INSIDE WHILE 2 !!!\n");
                           call RouteTable.pushfront(call routeTemp.front());
                           call routeTemp.popfront();
-                        }                      
+                        }
+                      
                       /*
                       i = 0;
                       lsSize = 0;
@@ -392,23 +406,44 @@ implementation{
                         lsSize++;
                         i++;
                       }
-                      */               
-                      call RouteTable.pushfront(LSP);
+                      */
+                      
+                      //LSP.arrLength = lsSize;
+                      //dbg(GENERAL_CHANNEL,"msgTTL:%d, LSP cost:%d from:%d arrLen:%d\n"
+                      //  ,myMsg->TTL, LSP.cost, myMsg->src,LSP.arrLength);  
+                      if(call RouteTable.isEmpty()){                    
+                        call RouteTable.pushfront(LSP);
+                      }
                       //printLSP();
                       seqNumber++;
                       makePack(&sendPackage, myMsg->src, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_LINKSTATE,
                         seqNumber, (uint8_t*)myMsg->payload, (uint8_t)sizeof(myMsg->payload));
                       insertPack(sendPackage);
                       call Sender.send(sendPackage,AM_BROADCAST_ADDR);
-                    } // End If !RouteTable
 
-                  }// END if !TOS_NODE
-                  }//break;  // break Case LINKSTATE // END PROTOCOL LINKSTATE
-                
-            } // END BROADCAST
+                    }
+                    //If no match to protocol LINKSTATE
+                  /*
+                    -If no Match make; Make LSP table and flood it if node hasn't seen
+                    -If no match between packet src and TOS_ID
+                        ->then Unique nodeID for RouteTable
+                        ->Store and replace with lowest cost
+                  */
+                    //dbg(GENERAL_CHANNEL,"AT END OF LS SWITCH!!!\n");
+                    if(!match){              
+                    }
+                    //break;
+                  }
+                  break;  // break Case LINKSTATE
 
+                // Default switch case; Break  
+              //default:
+                 // break;                   
+            }
+          }
 
-         else if(myMsg->dest == TOS_NODE_ID) //|| myMsg->protocol == PROTOCOL_PINGREPLY)) 
+         // changed elseif
+        if(myMsg->dest == TOS_NODE_ID) //|| myMsg->protocol == PROTOCOL_PINGREPLY)) 
          {
             dbg(FLOODING_CHANNEL,"Packet #%d arrived from %d with payload: %s\n", myMsg->seq, myMsg->src, myMsg->payload);
             // dont push PROTOCOL_CMD into list, will not allow same node to send multiple pings
@@ -466,8 +501,7 @@ implementation{
               }
             }
             //call Sender.send(sendPackage, AM_BROADCAST_ADDR);  // Resend packet
-          }          
-
+          } 
          //dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
          return msg;
       }
@@ -492,9 +526,9 @@ implementation{
       }
       //sendPackage.seq = sendPackage.seq + 1;
       //makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, sendPackage.seq, payload, PACKET_MAX_PAYLOAD_SIZE);
-      makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, ++seqNumber, payload, PACKET_MAX_PAYLOAD_SIZE);
+      makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, seqNumber, payload, PACKET_MAX_PAYLOAD_SIZE);
       call Sender.send(sendPackage, dest); // send to destination
-      //seqNumber = seqNumber + 1;
+      seqNumber = seqNumber + 1;
       
    }
 
@@ -531,7 +565,7 @@ implementation{
       dbg(ROUTING_CHANNEL, "Print Route of node:%d\n",TOS_NODE_ID);
       for(i =0; i < call Confirmed.size(); i++){
             routing=  call Confirmed.get(i);
-            dbg(ROUTING_CHANNEL, "--The Destination is %d\n  | The Cost is : %d\n  |  The next hop is %d\n", routing.node, routing.cost, routing.nextHop); //add i 
+            dbg(ROUTING_CHANNEL, "--The Destination is %d\n  | The Cost is : %d\n  | The next hop is %d\n", routing.node, routing.cost, routing.nextHop); //add i 
       }
    }
 
@@ -602,7 +636,7 @@ implementation{
 
      // Make our LSP packet and flood it through Broadcast
      //Current,TTL20,LINKSTATE prot, payload = array
-     makePack(&LSP,TOS_NODE_ID,AM_BROADCAST_ADDR,MAX_TTL-1,PROTOCOL_LINKSTATE,seqNumber++,
+     makePack(&LSP,TOS_NODE_ID,AM_BROADCAST_ADDR,MAX_TTL-1,PROTOCOL_LINKSTATE,++seqNumber,
         (uint8_t*) linkedNeighbors,(uint16_t) sizeof(linkedNeighbors));
      //push pack into our pack list
      //   - May need to check isKnown for seen LSP packs later/ or make new function
@@ -612,7 +646,7 @@ implementation{
       }
   }
 
-/*
+
  void printLSP(){
     LinkState lsp;
     uint16_t i,j;
@@ -629,158 +663,227 @@ implementation{
     }
    // dbg(GENERAL_CHANNEL, "RouteTable size is %d\n", call RouteTable.size());
   }
-*/
- void Dijkstra(uint8_t Destination, uint8_t Cost, uint8_t NextHop)
-    {
-      uint16_t i, j, k, l;
-      LinkState ConfirmedNode, TentativeNode,  NextNode, Confirmedgray, tentativeshorter, Confirmedblack;
-      //bool isValid;
 
-      //dbg(ROUTING_CHANNEL, "DIJKSTRA -----\n");
-     //1. initialize the confirmed list with an empty for myself
-     //entry has a cost of 0
-      //set unchecked node distance to infinity
-       //For the node just added to the Confirmed list in the previous step, call it node Next and select its LSP
-       // next= TOS_NODE_ID-1;
-        ConfirmedNode.node = Destination; // destination = TOS_NODE_ID
-        ConfirmedNode.cost = Cost; // cost =0
-        ConfirmedNode.nextHop= NextHop; // NextHop = TOS_NODE_ID
-        //ConfirmedNode.isValid = TRUE;
-        //confirmedlist[next] = ConfirmedNode;
-        call Confirmed.pushfront(ConfirmedNode);   
 
-        if(ConfirmedNode.node != TOS_NODE_ID){
-          for(i =0; i< call RouteTable.size(); i++){
-            NextNode = call RouteTable.get(i);
-            if(NextNode.node == Destination){
-                for(j = 0; j< NextNode.arrLength; j++){
-                  // If Neighbor is currently on neither the Confirmed nor tentative list
-                  //then add (Neighbor, Cost, nexthop) to the tentative list where NextHop is the direction I go reach Next
-                  if(NextNode.neighbors[j]>0){
-                    ConfirmedNode.isValid = FALSE;
-                    TentativeNode.isValid= FALSE;
+  void Dijkstra(){
+    uint16_t size = call RouteTable.size();
+    uint16_t sizenode[MAX];
+    uint16_t i, j, next, Cost[MAX][MAX], distance[MAX], gray[MAX], list[MAX], count, path, Next1, nextnode;
+    uint16_t mynode =TOS_NODE_ID-1;
+    bool isValid[MAX][MAX];
+    LinkState nextnode1, nextnode2;
+    
+    for(i =0 ; i< MAX; i++){
+      for(j= 0; j< MAX; j++){
+        isValid[i][j]= FALSE;
+      }
+    }
+   for(i = 0; i< MAX; i++){
+    nextnode1 = call RouteTable.get(i);
+    for(j = 0; j< MAX; j++){
+      if(isValid[i][j]== FALSE){
+        Cost[i][j]  = INFINITY;
+      }
+      else{
+        Cost[i][j] = 1;
+      }
+    }
+   }
 
-                    while(! call Tentative.isEmpty())
-                    {
-                        for(k= 0; k< NextNode.arrLength; k++){
-                          NextNode= call Tentative.get(i);
-                          //If Neighbor is currently on Tentative list
-                          if(NextNode.node == NextNode.neighbors[k]){
-                             TentativeNode.isValid= TRUE; 
-                          ////Cost is less then currently less than the currently listed cost
-                              if(Confirmedgray.cost > NextNode.cost){
-                          //for Neighbor, then replace the current entry with (Neighbor, Cost, Nexthop)
-                         //where nexthop is the direction I go to reach Next
-                                tentativeshorter = call Tentative.remove(k);
-                                tentativeshorter.cost= NextNode.cost;
-                                tentativeshorter.nextHop= NextNode.nextHop;
-                                call Tentative.pushfront(tentativeshorter);
-                                TentativeNode.isValid= TRUE;
+   for(i = 0; i < MAX ; i++){
+      distance[i] = Cost[mynode][i];
+      list[i] = mynode;
+      gray[i] =0;
+   }
+   distance[mynode]= 0;
+   gray[mynode] =1;
+   count =1;
 
-                              }
-                          }
-                        }
-                    }
-                  }
-                }
-              }
-            }
-          }
-          //dbg(ROUTING_CHANNEL, "ROUTING Table \n");
-          for(l = 0; l < call Confirmed.size(); l++)
-          {
-              Confirmedblack = call Confirmed.get(l);
-              //dbg(ROUTING_CHANNEL, "Dest: %d,  Cost: %d ,  Next: %d \n",  Confirmedblack.node, Confirmedblack.cost, Confirmedblack.nextHop);
-          }
-
-}
-
-    /*void Dijkstra(uint8_t Destination, uint8_t Cost, uint8_t NextHop)
-    {
-      uint16_t i, j;
-      uint8_t next;
-      uint8_t path;
-      uint8_t min; // =INFINITY;
-      uint16_t size;
-      uint16_t distance[MAXNODE];
-      bool isValid;
-      min= INFINITY;
-      dbg(ROUTING_CHANNEL, "DIJKSTA -----");
-      //int cost[MAXNODE][MAXNODE];
-      uint16_t confirmedlist[MAXNODE];
-      uint16_t tentativelist[MAXNODE];
-      LinkState ConfirmedNode, TentativeNode,  NextNode; // VisitConfirm, VisitTentative;
-      Neighbor nearNeighbors;
-      //size = call RouteTable.size();
-     //1. initialize the confirmed list with an empty for myself
-     //entry has a cost of 0
-      //set unchecked node distance to infinity
-      for( i= 0; i <call RouteTable.size(); i++){
-        confirmedlist.Cost[i] = INFINITY;
-        tentativelist.Cost[i] = INFINITY;
-        confirmedlist.isValid= FALSE;
-        tentativelist.isValid= FALSE;
-        tentativelist.Cost[i] = INFINITY;
-       }
-       //For the node just added to the Confirmed list in the previous step, call it node Next and select its LSP
-        next= TOS_NODE_ID-1;
-        ConfrimedNode.node = Destination;
-        ConfirmedNode.Cost = 0;
-        ConfirmedNode.nextHop= NextHop;
-        ConfirmedNode.isValid = TRUE;
-        //confirmedlist[next] = ConfirmedNode;
-        call Confrimed.pushfront(ConfirmedNode);   
-        if(Destination != TOS_NODE_ID){
-          for(i =0; i< call RouteTable.size(); i++){
-            NextNode = call RouteTable.get(i);
-            if(NextNode.node = Destination){
-              //3. 
-              //  a. If Neighbor is currently on neither the Confirmed nor tentative list
-              //then add (Neighbor, Cost, nexthop) to the tentative list where NextHop is the direction I go reach Next
-                if(confirmedlist[i].isValid == FALSE && tentativelist[i].isValid == FALSE){
-                    TentativeNode.node = i+1;
-                    TentativeNode.nextHop= path;
-                    tentativelist.isValid= TRUE;
-                    call Tentative.pushfront(TentativeNode);
-                }
-                // b. If Neighbor is currently on Tentative list and Cost is less then currently less than the currently listed cost
-                //    for Neighbor, then replace the current entry with (Neighbor, Cost, Nexthop)
-                      //where nexthop is the direction I go to reach Next
-                 if(tentativelist[i].isValid == FALSE && TentativeNode.Cost < tentativelist[i]){
-                    TentativeNode.node = i+1;
-                    TentativeNode.nextHop= path;
-                    tentativelist.isValid= TRUE;
-                    call Tentative.pushfront(TentativeNode);
-                }
-              }
-            }
-          }
-          //4
-          //if the tentative is empty then stop
-          if(call Tentative.isEmpty()){
-            return;
-          }
-          //if the tentative isn't empty then pick the empty from Tentative list with the lowest Cost
-          if(!(call Tentative.isEmpty()))
-          {
-            for(i =0 ; i< call RouteTable.size(); i++){
-              if(tentativelist[i].isValid==FALSE && tentativelist[i].Cost < min ){
-                min =tentativelist[i].Cost;
-                j= i;
-              }
-            }
-          //  return j;
-         // moved to Confirmed List 
-         //(move lowest Cost from Tentative list to Confrimed List)
-        ConfrimedNode.node = tentativelist[next].node;
-        ConfirmedNode.Cost = tentativelist[next].Cost;
-        ConfirmedNode.nextHop= tentativelist[next].nextHop;
-        ConfirmedNode.isValid = TRUE;
-        //confirmedlist[next] = ConfirmedNode;
-        call Confrimed.pushfront(ConfirmedNode);   
+   while( count < MAX -1){
+      path= INFINITY;
+      for(i =0; i< MAX; i++){
+        if(distance[i] <= path  && gray[i]==0){
+          path = distance[i];
+          Next1 = i;
+        }
+      }
+      gray[next] = 1;
+      for(i =0 ; i< MAX ; i++){
+        if(gray[i]==0){
+          if(path + Cost[Next1][i] < distance[i]){
+            distance[i] = path + Cost[Next1][i];
+            list[i] = Next1;
           }
         }
-    */
+      }
+      count++;
+   }
+   for(i = 0; i< MAX; i++){
+    nextnode = TOS_NODE_ID;
+    if(distance[i] != INFINITY){
+      if(i != mynode){
+        j= i;
+        while(j != mynode){
+          if(j!= mynode){
+            nextnode = j;
+          }
+          j =list[i];
+        }
+      }else{
+        nextnode = mynode;
+      }
+      if(nextnode != 0){
+          call tableroute.insert(i , nextnode);
+      }
+    }
+   }
+   if(call Confirmed.isEmpty())
+    {
+      for(i = 1; i <= 20; i++)
+      {
+        nextnode2.node = i;
+        nextnode2.cost = Cost[TOS_NODE_ID][i];
+        nextnode2.nextHop = call tableroute.get(i);
+        call Confirmed.pushfront(nextnode2);
+        //dbg(GENERAL_CHANNEL, "confirmed size: %d\n", call Confirmed.size());
+      }
+    }
+  }  
+
+/*
+
+  void Dijkstra()
+  {
+    int nodesize[20];
+    int size = call RouteTable.size();
+    int mn = 20;
+    int i,j,nexthop,cost[mn][mn],distance[mn],plist[mn];
+    int visited[mn],ncount,mindistance,nextnode;
+
+    int start_node = TOS_NODE_ID;
+    bool aMatrix[mn][mn];
+
+    LinkState temp, temp2;
+
+    for(i = 0; i < mn; i++)
+    {
+      for(j = 0; j < mn; j++)
+      {
+        aMatrix[i][j] = FALSE;
+      }
+    }
+    
+    for(i = 0; i < size; i++)
+    {
+      temp = call RouteTable.get(i);
+      for(j = 0; j < temp.arrLength; j++)
+      {
+        aMatrix[temp.node][temp.neighbors[j]] = TRUE;
+      }
+    }
+
+    for(i = 0; i < mn; i++)
+    {
+      for(j = 0; j < mn; j++)
+      {
+        if(aMatrix[i][j] == FALSE)
+        {
+          cost[i][j] = INFINITY;
+        }
+        else
+        {
+          cost[i][j] = 1;
+        }
+      }
+    }
+    if(TOS_NODE_ID == 1){
+    for(i = 0; i < mn; i++)
+    {
+      for(j = 0; j < mn; j++)
+      {
+        //printf("i=%d, j=%d, cost=%d\n", i, j, cost[i][j]);
+      }
+    }
+    }
+
+    for(i = 0; i < mn; i++)
+    {
+      distance[i] = cost[start_node][i];
+      plist[i] = start_node;
+      visited[i] = 0;
+    }
+    
+    distance[start_node] = 0;
+    visited[start_node] = 1;
+    ncount = 1;
+
+    while(ncount < mn - 1)
+    {
+      mindistance = INFINITY;
+      for(i = 0; i < mn; i++)
+      {
+        if(distance[i] <= mindistance && visited[i] == 0)
+        {
+          mindistance = distance[i];
+          nextnode = i;
+        }
+      }
+      visited[nextnode] = 1;
+      for(i = 0; i < mn; i++)
+      {
+        if(visited[i] == 0)
+        {
+          if(mindistance + cost[nextnode][i] < distance[i])
+          {
+            distance[i] = mindistance + cost[nextnode][i];
+            plist[i] = nextnode;
+          }
+        }
+      }
+      ncount++;
+    }
+
+    for(i = 0; i < mn; i++)
+    {
+      nexthop = TOS_NODE_ID;
+      if(distance[i] != INFINITY)
+      {
+        if(i != start_node)
+        {
+          j = i;
+          do {
+            if(j != start_node)
+            {
+              nexthop = j;
+            }
+            j = plist[j];
+          } while(j != start_node);
+        }
+        else
+        {
+          nexthop = start_node;
+        }
+        if(nexthop != 0)
+        {
+          call table.insert(i, nexthop);
+        }
+      }
+    }
+    if(call Confirmed.isEmpty())
+    {
+      for(i = 1; i <= 20; i++)
+      {
+        temp2.node = i;
+        temp2.cost = cost[TOS_NODE_ID][i];
+        temp2.nextHop = call table.get(i);
+        call Confirmed.pushfront(temp2);
+        //dbg(GENERAL_CHANNEL, "confirmed size: %d\n", call Confirmed.size());
+      }
+    }
+    
+  }
+
+*/
 
 
 }
