@@ -14,6 +14,8 @@
 #include "includes/CommandMsg.h"
 #include "includes/sendInfo.h"
 #include "includes/channels.h"
+#define INFINITY 999999
+#define MAX 20
 
 /*  TODO
  * - Figure out how to use LinkState struct
