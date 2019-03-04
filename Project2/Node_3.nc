@@ -17,18 +17,10 @@
 #define INFINITY 9999
 #define MAX 20
 /*  TODO
- * - Figure out how to use LinkState struct
- *      - Maybe once inside receive protocol_linkstate we can see what we need?
- * - Finish makeLSP
- * - Follow makeLSP packet to receive-> PROTOCOL = LINKSTATE
- *       - Figure out what to do inside protocol
- * - Dijkstra T_T
- * - Figure out Route Table
- * - Do we need to check/update neighbors?
- * - Calculate cost: The difference in TTL's?
- *      - It took MaxTTL-MyTTL to get here ?
- * - Might have to change from switch case to IF/ELSE, getting too many weird errors
- * - FINAL RouteTable print confirmed list, destination, cost, nextHop
+ * - Try to figure out why its not entering final if(myMsg->src == TOS_NODE_ID)
+ *   Try and change it to switch case?
+ *   Put on ahead of == AM_BROADCAST ??
+ *   Change variables in Dijkstra so its not same as https://www.geeksforgeeks.org/dijkstras-shortest-path-algorithm-greedy-algo-7/ 
 */
 
 
@@ -52,7 +44,7 @@ typedef struct LinkState {
     nx_uint16_t cost; 
     nx_uint16_t seq;
     nx_uint16_t nextHop;
-    bool isValid;
+    //bool isValid;
     }LinkState;
 
 
@@ -75,8 +67,8 @@ module Node{
    uses interface List<pack> as Packets;  // List of Packets
    uses interface List<Neighbor > as Neighbors;   // List of Known Neighbors
    uses interface List<Neighbor > as DroppedNeighbors;  // List of Neighbors dropped out of network
-   // ----- Project2 -----
-   // Two lists mentioned in book
+
+   // ----- Project2 -----  
    uses interface List<LinkState> as Tentative;
    uses interface List<LinkState> as Confirmed;
    uses interface List<LinkState> as RouteTable;
@@ -84,7 +76,7 @@ module Node{
    //uses interface List<LinkState> as routeTemp;
    // New Timer for LSP 
    uses interface Timer<TMilli> as lspTimer; // fires and call function to create LSP packet
-   uses interface Hashmap<int> as tableroute;
+   uses interface Hashmap<int> as tableroute; // for out Dijkstras algorithm
 
 }
 
@@ -198,25 +190,23 @@ implementation{
         //makeLSP(); 
        // if(lspCount > 1 && lspCount % 20 == 0 && lspCount < 61){
        //     Dijkstra();        
-           // }
-        
+           // }        
        if(lspCount < 17 && lspCount %3 == 2 && lspCount > 1){
           makeLSP();
        }
        if(lspCount == 17)
-          Dijkstra();
-          
-                  
+          Dijkstra();                          
    }
 
 
    event void AMControl.startDone(error_t err){
       if(err == SUCCESS){
          dbg(GENERAL_CHANNEL, "Radio On\n");
+         //makeLSP();
          // Call timer to fire at intervals between 
-         //call periodicTimer.startPeriodicAt(1,1000); //1000 ms
-         call periodicTimer.startPeriodic(1000);
-         //call lspTimer.startPeriodic(100);
+         call periodicTimer.startPeriodicAt(1,1000); //1000 ms
+         //call periodicTimer.startPeriodic(1000);
+         //call lspTimer.startPeriodic(1000);
       }else{
          //Retry until successful
          call AMControl.start();
@@ -261,8 +251,7 @@ implementation{
                 //PROTOCOL_PING SWITCH CASE //
                 // repackage with TTL-1 and PING_REPLY PROTOCOL
                case PROTOCOL_PING:
-                  //dbg(GENERAL_CHANNEL, "myMsg->Protocol %d\n", myMsg->protocol);                  
-                 // dbg(NEIGHBOR_CHANNEL, "Packet from %d searching for neighbors\n",myMsg->src);
+
                  // makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, sizeof(myMsg->payload));
                   makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
                   insertPack(sendPackage); // Insert pack into our list
@@ -301,6 +290,7 @@ implementation{
                      NewNeighbor.nodeID =  myMsg->src;  // add src id                    
                      NewNeighbor.life = 0;  // reset life
                      call Neighbors.pushback(NewNeighbor);  // push into list
+                     //makeLSP();
            //          dbg(GENERAL_CHANNEL, "pushback New Neighbor!\n");
                  }
                  else{
@@ -311,7 +301,7 @@ implementation{
                  }
                 }
 
-                  break;
+                break;
             // ---------------- PROJECT 2 -------------------//
                 // Go here After flooding LSP/ calculate route
                 /*  Linkstate Protocol
@@ -446,8 +436,9 @@ implementation{
             }
           }
 
+          // ---------NOT ENTERING HERE ------------
          // changed elseif
-       if(TOS_NODE_ID == myMsg->dest) //|| myMsg->protocol == PROTOCOL_PINGREPLY)) 
+       if(myMsg->dest == TOS_NODE_ID) //|| myMsg->protocol == PROTOCOL_PINGREPLY)) 
          {
             dbg(FLOODING_CHANNEL,"Packet #%d arrived from %d with payload: %s\n", myMsg->seq, myMsg->src, myMsg->payload);
             // dont push PROTOCOL_CMD into list, will not allow same node to send multiple pings
@@ -461,9 +452,8 @@ implementation{
             // PROTOCOL_PING: packet was pinged but no reply
             //if(myMsg->protocol == PROTOCOL_PING) {
               nextHop = 0;
-        //       dbg(FLOODING_CHANNEL,"Ping replying to %d\n", myMsg->src);
-               //makepack with myMsg->src as destination
-               //makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, sendPackage.seq+1,(uint8_t *)myMsg->payload, sizeof(myMsg->payload));               
+               dbg(FLOODING_CHANNEL,"Ping replying to %d\n", myMsg->src);
+               //makepack with myMsg->src as destination              
                makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, seqNumber, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
                seqNumber++;   // increase sequence id number
                // Push into seen/sent package list
@@ -491,7 +481,7 @@ implementation{
          // Flood Packet with TTL - 1
          else {
           uint16_t k = 0;
-            
+          uint16_t snd = 0;
           LinkState tempDest;
 
           makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, sizeof(myMsg->payload));
@@ -501,9 +491,11 @@ implementation{
             for (k = 0; k < call Confirmed.size(); k++) {
               tempDest = call Confirmed.get(k);
               if(myMsg->dest == tempDest.node) {
-                call Sender.send(sendPackage, tempDest.nextHop);
+                snd = tempDest.nextHop;
+                //call Sender.send(sendPackage, tempDest.nextHop);
               }
             }
+            call Sender.send(sendPackage,snd);
             //call Sender.send(sendPackage, AM_BROADCAST_ADDR);  // Resend packet
           } 
          //dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
@@ -593,11 +585,17 @@ implementation{
       Package->protocol = protocol;
       memcpy(Package->payload, payload, length);
    }
+
+   //Helper function to find the vertex with min distance, from set of vertices Not included in shortest path
     uint16_t minDist(uint16_t dist[], bool sptSet[]){
-        uint16_t min = INFINITY, minIndex = 18, i;
+        uint16_t min = INFINITY;  // min value
+        uint16_t minIndex = 18;
+        uint16_t i;
+
         for(i = 0; i < MAX; i++){
-            if(sptSet[i] == FALSE && dist[i] < min)
-                min = dist[i], minIndex = i;
+            if(sptSet[i] == FALSE && dist[i] < min) // was < min
+                min = dist[i];
+                minIndex = i;
         }
         return minIndex;
     }
@@ -605,7 +603,7 @@ implementation{
       isKnown bool function check to see if packet is in list of sent/received(seen) packets
    */
    bool isKnown(pack *p) {
-         uint16_t size = call Packets.size(); // size of our packet list1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
+         uint16_t size = call Packets.size(); // size of our packet list
          pack temp;
          uint16_t i =0;
          for(i = 0; i < size; i++) {
@@ -650,7 +648,6 @@ implementation{
      makePack(&LSP,TOS_NODE_ID,AM_BROADCAST_ADDR,MAX_TTL-1,PROTOCOL_LINKSTATE,++seqNumber,
         (uint8_t*) linkedNeighbors,(uint16_t) sizeof(linkedNeighbors));
      //push pack into our pack list
-     //   - May need to check isKnown for seen LSP packs later/ or make new function
      insertPack(LSP);
      call Sender.send(LSP,AM_BROADCAST_ADDR);
      //dbg(ROUTING_CHANNEL, "LSPNode %d has been flooded\n",TOS_NODE_ID);
@@ -675,38 +672,61 @@ implementation{
    // dbg(GENERAL_CHANNEL, "RouteTable size is %d\n", call RouteTable.size());
   }
 
+  /*
+   *
+   * Dijkstra single source shortest path using adjacency matrix
+   * - Create shortest path tree set(sptSet) that keeps track of vertices included in shortest path tree.
+   *   Initially this set is empty.
+   * - Assign distance value to all vertices. Initialize all dist values as INFINITY and 0 for source vertex.
+   * - While sptSet doesn't include all vertices 
+   *   1. pick vertex u not in sptSet and has min distance value
+   *   2. Add u to sptSet
+   *   3. Update distance value of all adjacent vertices of u. To update distance, iterate through all adjacent vertices
+   *      For every v, if sum of distance of u(from srouce) and cost u->v, is less than dist v, then update dist of v.
+   * source: geeks for geeks shortest path
+  */
+
 void Dijkstra(){
-        uint16_t LSTable[MAX][MAX];
+        uint16_t LSTable[MAX][MAX];  //Tree: node/cost
         uint16_t myID = TOS_NODE_ID - 1, i, count, v, u;
-        uint16_t dist[MAX];
-        bool sptSet[MAX];
+
+        uint16_t dist[MAX]; // The output array. dist[i] sill hold he shortest distancec from src to i
+
+        bool sptSet[MAX];  // sptSet[i] will be true if vertex i is included in shortest path tree
+
         int parent[MAX];
         int temp;
         
         LinkState nextnode2;
-
+        // Initialize all distance as INFINITE and sptSet as FALSE
         for(i = 0; i < MAX; i++){
             dist[i] = INFINITY;
             sptSet[i] = FALSE;
-            parent[i] = -1;   
+            parent[i] = -1;   // base case
         }
 
+        // Distance to own node is always 0
         dist[myID] = 0;
-
+        // Find shortest path for all vertices
         for(count = 0; count < MAX - 1; count++){
+          // Picks min distance vertex from set of vertices not yet processed.
             u = minDist(dist, sptSet);
+            // Marks chosen vertex as TRUE
             sptSet[u] = TRUE;
 
+            //Update dist value of the adjacent vertices of u(chosen vertex)
             for(v = 0; v < MAX; v++){
+                //Updates dist[v] only if not in sptSet(not processed)
                 if(!sptSet[v] && LSTable[u][v] != INFINITY && dist[u] + LSTable[u][v] < dist[v]){
                     parent[v] = u;
                     dist[v] = dist[u] + LSTable[u][v];
                 }
             }           
         }
-
+        
         for(i = 0; i < MAX; i++){
             temp = i;
+            //parent = -1 basecase; i/temp is source.
             while(parent[temp] != -1  && parent[temp] != myID && temp < MAX){
                 temp = parent[temp];
             }
@@ -716,30 +736,33 @@ void Dijkstra(){
             else
                 call tableroute.insert(i + 1, temp + 1);
         }
-           if(call Confirmed.isEmpty())
-    {
+        
+        
+
+      if(call Confirmed.isEmpty()){
       for(i = 1; i <= 20; i++)
       {
         nextnode2.node = i;
         nextnode2.cost = LSTable[TOS_NODE_ID][i];
         nextnode2.nextHop = call tableroute.get(i);
         call Confirmed.pushfront(nextnode2);
-        //dbg(GENERAL_CHANNEL, "confirmed size: %d\n", call Confirmed.size());
+        //dbg(GENERAL_CHANNEL, "Our Confirmed list size:  %d\n", call Confirmed.size());
       }
     }
+    
     }
 
 /*
   void Dijkstra(){
     uint16_t size = call RouteTable.size();
-    uint16_t sizenode[MAX];
+    //uint16_t sizenode[MAX];
     // indexes
     uint16_t i, j, next;
     // arrays
     uint16_t Cost[MAX][MAX], distance[MAX], gray[MAX], list[MAX];
     uint16_t count, path, Next1, nextnode;
     uint16_t mynode =TOS_NODE_ID-1;
-    // array of bool
+    // visited array
     bool isValid[MAX][MAX];
 
     LinkState nextnode1, nextnode2;
