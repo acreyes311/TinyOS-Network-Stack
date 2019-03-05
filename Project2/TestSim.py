@@ -144,9 +144,9 @@ def main():
     s.addChannel(s.NEIGHBOR_CHANNEL);
     s.addChannel(s.ROUTING_CHANNEL); # added for projet2
 
-    s.runTime(40);
+    s.runTime(50);
     s.ping(12,17, "Hello, World, 12-17");
-    s.runTime(40);
+    s.runTime(50);
     #s.ping(3, 9, "Hi!!! 3-9");
     #s.runTime(40);
 
@@ -155,17 +155,17 @@ def main():
     #s.neighborDMP(12);
     #s.runTime(50);
 
-    s.routeDMP(10);
-    s.runTime(50);
-    s.routeDMP(15);
-    s.runTime(50);
+    #s.routeDMP(10);
+   # s.runTime(50);
+    #s.routeDMP(15);
+    #s.runTime(50);
     #s.routeDMP(19);
     #s.runTime(50);
 
     s.moteOff(7); #turns off node 7
     s.runTime(50);
 
-    s.ping(5,8," -----TEST-----");
+    s.ping(5,8,"Test message");
     s.runTime(100);
 
     i=0;
