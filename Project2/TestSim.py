@@ -129,10 +129,13 @@ class TestSim:
         print 'Adding Channel', channelName;
         self.t.addChannel(channelName, out);
 
+
+
 def main():
     s = TestSim();
     s.runTime(10);
-    s.loadTopo("long_line.topo");
+    #s.loadTopo("long_line.topo");
+    s.loadTopo("ring.topo");
     s.loadNoise("no_noise.txt");
     s.bootAll();
     s.addChannel(s.COMMAND_CHANNEL);
@@ -141,15 +144,41 @@ def main():
     s.addChannel(s.NEIGHBOR_CHANNEL);
     s.addChannel(s.ROUTING_CHANNEL); # added for projet2
 
-    s.runTime(20);
-    s.ping(10,13, "Hello, World");
-    s.runTime(10);
-    s.ping(3, 9, "Hi!!!");
-    s.runTime(20);
-    s.neighborDMP(4);
-    s.runTime(20);
-    s.neighborDMP(8);
-    s.runTime(20);
+    s.runTime(40);
+    s.ping(12,17, "Hello, World, 12-17");
+    s.runTime(40);
+    #s.ping(3, 9, "Hi!!! 3-9");
+    #s.runTime(40);
+
+    #s.neighborDMP(5);
+    #s.runTime(50);
+    #s.neighborDMP(12);
+    #s.runTime(50);
+
+    s.routeDMP(10);
+    s.runTime(50);
+    s.routeDMP(15);
+    s.runTime(50);
+    s.routeDMP(19);
+    s.runTime(50);
+
+    s.moteOff(7); #turns off node 7
+    s.runTime(50);
+
+    s.ping(5,8," -----TEST-----");
+    s.runTime(100);
+
+    i=0;
+    for i in range(1,s.numMote+1):
+        s.neighborDMP(i);
+        s.runTime(50);
+        print("\n")
+    j = 0;
+    for j in range(1,s.numMote+1):
+        s.routeDMP(j);
+        s.runTime(50);
+        print("\n")
+
 
 if __name__ == '__main__':
     main()
