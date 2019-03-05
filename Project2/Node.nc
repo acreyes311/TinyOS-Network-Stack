@@ -668,7 +668,9 @@ void Dijkstra(){
 
         bool isValid[MAX];  // isValid[i] will be true if vertex i is included in shortest path tree
 
-        int base[MAX];
+        int base[MAX];  // Base/Parent array for shortest route calculation
+                        // stores indexes of parent nodes
+                        // Output array which is used to show constructed MST
         int num;
         
         LinkState nextnode2;
@@ -690,7 +692,7 @@ void Dijkstra(){
 
             //Update Cost value of the adjacent vertices of v(chosen vertex)
             for(E = 0; E < MAX; E++){
-                //Updates dist[v] only if not in sptSet(not processed)
+                //Updates Cost[v] only if not in sptSet(not processed)
                 if(!isValid[E] && G[V][E] != INFINITY && Cost[V] + G[V][E] < Cost[E]){
                     base[E] = V;
                     Cost[E] = Cost[V] + G[V][E];
@@ -700,11 +702,11 @@ void Dijkstra(){
         //Fill our hashmap
         for(i = 0; i < MAX; i++){
             num = i;
-            //parent = -1 basecase; i/temp is source.
+            //parent = -1 basecase; i/temp is source. (key, input)
             while(base[num] != -1  && base[num] != nextnode && num < MAX){
                 num = base[num];
             }
-            if(base[num] != nextnode){
+            if(base[num] != nextnode){  // while parent[] != current node - 1
                 call tableroute.insert(i + 1, 0);
             }
             else
