@@ -14,24 +14,8 @@
 #include "includes/CommandMsg.h"
 #include "includes/sendInfo.h"
 #include "includes/channels.h"
-#define INFINITY 999999
+#define INFINITY 9999
 #define MAX 20
-
-/*  TODO
- * - Figure out how to use LinkState struct
- *      - Maybe once inside receive protocol_linkstate we can see what we need?
- * - Finish makeLSP
- * - Follow makeLSP packet to receive-> PROTOCOL = LINKSTATE
- *       - Figure out what to do inside protocol
- * - Dijkstra T_T
- * - Figure out Route Table
- * - Do we need to check/update neighbors?
- * - Calculate cost: The difference in TTL's?
- *      - It took MaxTTL-MyTTL to get here ?
- * - Might have to change from switch case to IF/ELSE, getting too many weird errors
- * - FINAL RouteTable print confirmed list, destination, cost, nextHop
-*/
-
 
 typedef nx_struct Neighbor {
    nx_uint16_t nodeID;
@@ -46,13 +30,14 @@ typedef nx_struct Neighbor {
  * - Cost
  * - Next
  */
-typedef nx_struct LinkState {
+typedef struct LinkState {
     nx_uint16_t neighbors[64]; // current list of neighbors
     nx_uint16_t arrLength;
-    nx_uint16_t node; // Dest?
+    nx_uint16_t node; 
     nx_uint16_t cost; 
     nx_uint16_t seq;
     nx_uint16_t nextHop;
+    //bool isValid;
     }LinkState;
 
 
@@ -75,17 +60,16 @@ module Node{
    uses interface List<pack> as Packets;  // List of Packets
    uses interface List<Neighbor > as Neighbors;   // List of Known Neighbors
    uses interface List<Neighbor > as DroppedNeighbors;  // List of Neighbors dropped out of network
-   // ----- Project2 -----
-   // Two lists mentioned in book
+
+   // ----- Project2 -----  
    uses interface List<LinkState> as Tentative;
    uses interface List<LinkState> as Confirmed;
    uses interface List<LinkState> as RouteTable;
    uses interface List<LinkState> as routeTemp;
-   uses interface List<LinkState> as tempLS;
-   uses interface Hashmap<int> as tableroute;
-   
+   //uses interface List<LinkState> as routeTemp;
    // New Timer for LSP 
    uses interface Timer<TMilli> as lspTimer; // fires and call function to create LSP packet
+   uses interface Hashmap<int> as tableroute; // for out Dijkstras algorithm
 
 }
 
@@ -98,14 +82,15 @@ implementation{
    Neighbor TempNeighbor;
 
    // Prototypes
-
    bool isKnown(pack *p);  // already seen function
    void insertPack(pack p); // push into list
    void neighborList(); // neighbor list
-
+ 
    // ---------Project 2 ------------//
    void makeLSP();
    void Dijkstra();
+   uint16_t minDist(uint16_t Cost[], bool isValid[]);
+   //void Dijkstra(uint8_t Destination, uint8_t Cost, uint8_t NextHop);
    void printLSP();
    
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
@@ -146,8 +131,6 @@ implementation{
     Neighbor temp;
     size = call Neighbors.size();
     lspCount++;
-    // Trouble with Neighbor* we need to call function get to retrieve each neighbor
-    // ..Cant change life directly (!neighbor->life)
 
     //Check to see if neighbors have been found
     if(!call Neighbors.isEmpty()) {
@@ -166,7 +149,7 @@ implementation{
 
         // Drop expired neighbors after 3 pings and put in DroppedList
         if (temp.life > 5) {
-          //line = call Neighbors.remove(i);
+          line = call Neighbors.remove(i);
           call Neighbors.remove(i);
           //dbg(NEIGHBOR_CHANNEL,"Neighbor %d has EXPIRED and DROPPED from Node %d\n",line.nodeID,TOS_NODE_ID);
           call DroppedNeighbors.pushfront(line);
@@ -188,30 +171,25 @@ implementation{
    event void periodicTimer.fired() {
         // dbg(GENERAL_CHANNEL, "Call to neighborList()\n");
         neighborList();
-        if(lspCount > 1 && lspCount % 3 == 0 && lspCount < 16){
+        //makeLSP();
+       // Dijkstra();
+       
+       if(lspCount < 17 && lspCount %3 == 2 && lspCount > 1){
           makeLSP();
-        }
-        //makeLSP(); 
-        if(lspCount > 1 && lspCount % 20 == 0 && lspCount < 61){
-           Dijkstra();       
-            }
-        /*
-        if(lspCount < 17 && lspCount %3 == 2 && lspCount > 1){
-          makeLSP();
-        }
-        if(lspCount == 17)
-          dijkstra();
-        */           
+       }
+       if(lspCount == 17)
+          Dijkstra();                          
    }
 
 
    event void AMControl.startDone(error_t err){
       if(err == SUCCESS){
          dbg(GENERAL_CHANNEL, "Radio On\n");
+         //makeLSP();
          // Call timer to fire at intervals between 
          //call periodicTimer.startPeriodicAt(1,1000); //1000 ms
          call periodicTimer.startPeriodic(1000);
-         //call lspTimer.startPeriodic(100);
+         //call lspTimer.startPeriodic(1000);
       }else{
          //Retry until successful
          call AMControl.start();
@@ -225,30 +203,30 @@ implementation{
       bool flag;
       uint16_t size;
       uint16_t i = 0;
+      uint16_t n;
       LinkState LSP;
       LinkState temp;
+      LinkState dest;
       Neighbor lspNeighbor;
       uint16_t lsSize = 0;  // link state-> arrLength
       bool match;
+      uint16_t nextHop;
 
 
       if(len==sizeof(pack))
       {
 
          pack* myMsg=(pack*) payload;  // Message of received package
-                  
-         //dbg(GENERAL_CHANNEL, "Package  received from : %d\n", myMsg->src);
-         //dbg(FLOODING_CHANNEL,"Packet being flooded to %d\n", myMsg->dest);
-         
+
          if(myMsg->TTL == 0) {
          // Drop packet if expired or seen 
          }
          if(isKnown(myMsg)) {
    //         dbg(FLOODING_CHANNEL,"Already seen PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
          }
-         
+
          // Neighbor Discovery or LSP entry
-       else if(AM_BROADCAST_ADDR == myMsg->dest) {            
+      if(AM_BROADCAST_ADDR == myMsg->dest) {            
    //       dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d\n", myMsg->src);
             // What protocol does the message contain
            switch(myMsg->protocol) {
@@ -256,8 +234,7 @@ implementation{
                 //PROTOCOL_PING SWITCH CASE //
                 // repackage with TTL-1 and PING_REPLY PROTOCOL
                case PROTOCOL_PING:
-                  //dbg(GENERAL_CHANNEL, "myMsg->Protocol %d\n", myMsg->protocol);                  
-                 // dbg(NEIGHBOR_CHANNEL, "Packet from %d searching for neighbors\n",myMsg->src);
+
                  // makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, sizeof(myMsg->payload));
                   makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
                   insertPack(sendPackage); // Insert pack into our list
@@ -296,6 +273,7 @@ implementation{
                      NewNeighbor.nodeID =  myMsg->src;  // add src id                    
                      NewNeighbor.life = 0;  // reset life
                      call Neighbors.pushback(NewNeighbor);  // push into list
+                     //makeLSP();
            //          dbg(GENERAL_CHANNEL, "pushback New Neighbor!\n");
                  }
                  else{
@@ -306,7 +284,7 @@ implementation{
                  }
                 }
 
-                  break;
+                break;
             // ---------------- PROJECT 2 -------------------//
                 // Go here After flooding LSP/ calculate route
                 /*  Linkstate Protocol
@@ -316,28 +294,23 @@ implementation{
                   If received LSP is newest, send that copy to all its neighbors and they do same
                   ->most recent LSP eventually reaches all nodes
                 */
-                case PROTOCOL_LINKSTATE:                             
-                  //LinkState LSP;
-                  //LinkState routeTemp;
-                  //Neighbor lspNeighbor;
-                  //uint16_t i;
-                  //uint16_t lsSize;  // link state-> arrLength
-                  //bool match;
+                case PROTOCOL_LINKSTATE:                          
+                 
                  // dbg(ROUTING_CHANNEL, "Node: %d successfully received an LSP Packet from Node %d! Cost: %d \n", TOS_NODE_ID, myMsg->src, MAX_TTL - myMsg->TTL);
                   //dbg(ROUTING_CHANNEL, "Payload Array length is: %d \n", call RouteTable.size());
                   match = FALSE;
                   //Check for LSP and current node match
                   // If node already has copy of LSP
-                  if(myMsg->src == TOS_NODE_ID){
-                    dbg(ROUTING_CHANNEL, "Match found. Dont Flood pack\n");
+                  //if(myMsg->src == TOS_NODE_ID){
+                    //dbg(ROUTING_CHANNEL, "Match found. Dont Flood pack\n");
                     // set flag = true
-                    match = TRUE;
-                  }
+                   // match = TRUE;
+                //  }
                   // if our table IS empty; Initialize and push into our RouteTable
                   if(call RouteTable.isEmpty()){
                     temp.node = TOS_NODE_ID;
                     temp.nextHop = TOS_NODE_ID;
-                    temp.seq = 0;
+                    temp.seq = myMsg->seq;
                     temp.arrLength = call Neighbors.size();
                     temp.cost = 0;
                     for(i = 0; i< temp.arrLength; i++) {
@@ -345,20 +318,18 @@ implementation{
                       temp.neighbors[i] = lspNeighbor.nodeID;
                     }
                     call RouteTable.pushfront(temp);
-                    //break;
-                    dbg(GENERAL_CHANNEL,"RouteTable size: %d\n",call RouteTable.size());
-                    dbg(GENERAL_CHANNEL,"msgTTL:%d, LSP cost:%d from:%d arrLen:%d\n", myMsg->TTL, LSP.cost, myMsg->src,LSP.arrLength);
+                    //dbg(GENERAL_CHANNEL,"RouteTable size: %d\n",call RouteTable.size());
+                   // dbg(GENERAL_CHANNEL,"msgTTL:%d, LSP cost:%d from:%d arrLen:%d\n", myMsg->TTL, LSP.cost, myMsg->src,LSP.arrLength);
                   }
-                  // Else src is not current node 
-                  
+                  // Else src is not current node                   
                   //else{
                   if(myMsg->src != TOS_NODE_ID){
                    // dbg(GENERAL_CHANNEL,"INSIDE IF(my->src != TOSNODE\n");
                     LSP.node = myMsg->src;
                     LSP.seq = myMsg->seq;
-                    //LSP.nextHop = myMsg->src; // not tos_node
+                    ///////////LSP.nextHop = myMsg->src; // not tos_node
                     LSP.cost = MAX_TTL - myMsg->TTL; // Took this many life to get here
-                    //dbg(GENERAL_CHANNEL,"msgTTL:%d, LSP cost:%d from:%d\n",myMsg->TTL, LSP.cost, myMsg->src);
+                   // dbg(GENERAL_CHANNEL,"msgTTL:%d, LSP cost:%d from:%d\n",myMsg->TTL, LSP.cost, myMsg->src);
                     i = 0;
                     lsSize = 0;
                     while(myMsg->payload[i] > 0){
@@ -378,27 +349,27 @@ implementation{
                          //dbg(GENERAL_CHANNEL,"INSIDE WHILE 2 !!!\n");
                         temp = call RouteTable.front();
                         //dbg(GENERAL_CHANNEL,"INSIDE WHILE 2 !!!\n");
-                        // Check for most current LSP(cost)
-                        if((LSP.node == temp.node)&&(LSP.cost <= temp.cost)){
+                        // Check for most current LSP(SEQ) and Lowest cost
+                        if((LSP.node == temp.node)&&(LSP.cost < temp.cost) &&(LSP.seq>=temp.seq)){
                            //dbg(GENERAL_CHANNEL,"INSIDE IF COST CHECK\n");
                           call RouteTable.popfront();  // Remove older LSP 
                         }
-                        else if((LSP.node == temp.node) && (LSP.cost > temp.cost)){
-                          call tempLS.pushfront(call RouteTable.front());
+                        else if((LSP.node == temp.node) && (LSP.cost > temp.cost)&&(LSP.seq>=temp.seq)){
+                          call routeTemp.pushfront(call RouteTable.front());
                           call RouteTable.popfront();
                         }
                         //dbg(GENERAL_CHANNEL,"INSIDE WHILE 2 !!!\n");
                         else {
                           //dbg(GENERAL_CHANNEL,"INSIDE ELSE CHECK \n");
-                          call tempLS.pushfront(call RouteTable.front());
+                          call routeTemp.pushfront(call RouteTable.front());
                           call RouteTable.popfront();
                         }
                       }
                         
-                        while(!call tempLS.isEmpty()){
+                        while(!call routeTemp.isEmpty()){
                           //dbg(GENERAL_CHANNEL,"INSIDE WHILE 2 !!!\n");
-                          call RouteTable.pushfront(call tempLS.front());
-                          call tempLS.popfront();
+                          call RouteTable.pushfront(call routeTemp.front());
+                          call routeTemp.popfront();
                         }
                       
                       /*
@@ -410,18 +381,19 @@ implementation{
                         lsSize++;
                         i++;
                       }
-                      */
-                      
+                      */                      
                       //LSP.arrLength = lsSize;
-                      dbg(GENERAL_CHANNEL,"msgTTL:%d, LSP cost:%d from:%d arrLen:%d\n"
-                        ,myMsg->TTL, LSP.cost, myMsg->src,LSP.arrLength);                      
-                      call RouteTable.pushfront(LSP);
+ 
+                      if(call RouteTable.isEmpty()){                    
+                        call RouteTable.pushfront(LSP);
+                      }
                       //printLSP();
                       seqNumber++;
                       makePack(&sendPackage, myMsg->src, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_LINKSTATE,
                         seqNumber, (uint8_t*)myMsg->payload, (uint8_t)sizeof(myMsg->payload));
                       insertPack(sendPackage);
                       call Sender.send(sendPackage,AM_BROADCAST_ADDR);
+                      //break;
 
                     }
                     //If no match to protocol LINKSTATE
@@ -431,47 +403,56 @@ implementation{
                         ->then Unique nodeID for RouteTable
                         ->Store and replace with lowest cost
                   */
-                    if(!match){                    
-
+                    //dbg(GENERAL_CHANNEL,"AT END OF LS SWITCH!!!\n");
+                    if(!match){ 
+                    //             
                     }
-
-
+                    //break;
                   }
-                  break;  // break Case LINKSTATE
-
-                // Default switch case; Break  
-              default:
-                  break;                   
+                  break;  // break Case LINKSTATE                        
             }
           }
-          // End Broadcast
-         else if(myMsg->dest == TOS_NODE_ID) 
+
+          // ---------NOT ENTERING HERE ------------
+
+       if(myMsg->dest == TOS_NODE_ID) //|| myMsg->protocol == PROTOCOL_PINGREPLY)) 
          {
             dbg(FLOODING_CHANNEL,"Packet #%d arrived from %d with payload: %s\n", myMsg->seq, myMsg->src, myMsg->payload);
             // dont push PROTOCOL_CMD into list, will not allow same node to send multiple pings
+           //if(myMsg->protocol != PROTOCOL_CMD) {
+               //insertPack(*myMsg); // push non protol_cmd into packet list
+            //}
 
-            if(myMsg->protocol != PROTOCOL_CMD) {
-               insertPack(*myMsg); // push non protol_cmd into packet list
-            }
+            // Protocol Ping forwards to nextHop from our Confirmed List
+            if( myMsg->protocol == PROTOCOL_PING ){
 
             /////BEGIN CHECKING FLOODING PROTOCOLS////
 
             // PROTOCOL_PING: packet was pinged but no reply
-            if(myMsg->protocol == PROTOCOL_PING) {
-        //       dbg(FLOODING_CHANNEL,"Ping replying to %d\n", myMsg->src);
-               //makepack with myMsg->src as destination
-               //makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, sendPackage.seq+1,(uint8_t *)myMsg->payload, sizeof(myMsg->payload));               
+            //if(myMsg->protocol == PROTOCOL_PING) {
+              nextHop = 0;
+               dbg(FLOODING_CHANNEL,"Ping replying to %d\n", myMsg->src);
+               //makepack with myMsg->src as destination              
                makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, seqNumber, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
                seqNumber++;   // increase sequence id number
                // Push into seen/sent package list
                insertPack(sendPackage);
+               dbg(GENERAL_CHANNEL, "BEFORE dest.nextHOP\n");
+               // Get our next Hop
+               for (n = 0; n < call Confirmed.size(); n++){
+                dest = call Confirmed.get(n);
+                if(myMsg->src == dest.node){
+                  nextHop = dest.nextHop;
+                }
+               }
                // Send new packet
-               call Sender.send(sendPackage, AM_BROADCAST_ADDR);               
+               call Sender.send(sendPackage, nextHop); // Send to nextHop
+               //call Sender.send(sendPackage, AM_BROADCAST_ADDR);               
             }
 
             // PROTOCOL PINGREPLY: Packet at correct destination; Stop sending packet
             if(myMsg->protocol == PROTOCOL_PINGREPLY) {
-       //        dbg(FLOODING_CHANNEL, "PING REPLY RECEIVED FROM %d\n ",myMsg->src);
+               dbg(FLOODING_CHANNEL, "PING REPLY RECEIVED FROM %d\n ",myMsg->src);
             }
 
          }
@@ -479,13 +460,24 @@ implementation{
          // Packet does not belong to current node 
          // Flood Packet with TTL - 1
          else {
-               makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, sizeof(myMsg->payload));
+          uint16_t k = 0;
+          uint16_t snd = 0;
+          LinkState tempDest;
+
+          makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, sizeof(myMsg->payload));
                //makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
         //       dbg(FLOODING_CHANNEL, "Packet from %d, intended for %d is being Rebroadcasted.\n", myMsg->src, myMsg->dest);
-               insertPack(sendPackage);   // Packet to be inserted into seen packet list
-               call Sender.send(sendPackage, AM_BROADCAST_ADDR);  // Resend packet
-            }          
-
+            insertPack(sendPackage);   // Packet to be inserted into seen packet list
+            for (k = 0; k < call Confirmed.size(); k++) {
+              tempDest = call Confirmed.get(k);
+              if(myMsg->dest == tempDest.node) {
+                snd = tempDest.nextHop;
+                //call Sender.send(sendPackage, tempDest.nextHop);
+              }
+            }
+            call Sender.send(sendPackage,snd);
+            //call Sender.send(sendPackage, AM_BROADCAST_ADDR);  // Resend packet
+          } 
          //dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
          return msg;
       }
@@ -497,11 +489,21 @@ implementation{
 
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
-      dbg(GENERAL_CHANNEL, "PING EVENT____________________________________ \n");
+    uint16_t i;
+    LinkState ls;
+    uint16_t dest;
+     dbg(GENERAL_CHANNEL, "PING EVENT \n");
+      for (i = 0; i < call Confirmed.size(); i++){
+        ls = call Confirmed.get(i);
+        if(ls.node == destination){
+          dest = ls.nextHop;
+        }
+
+      }
       //sendPackage.seq = sendPackage.seq + 1;
       //makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, sendPackage.seq, payload, PACKET_MAX_PAYLOAD_SIZE);
       makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, seqNumber, payload, PACKET_MAX_PAYLOAD_SIZE);
-      call Sender.send(sendPackage, AM_BROADCAST_ADDR); 
+      call Sender.send(sendPackage, dest); // send to destination
       seqNumber = seqNumber + 1;
       
    }
@@ -536,11 +538,10 @@ implementation{
       uint16_t i =0;
       //uint16_t size;
       //size = call Confirmed.size();
-      Dijkstra();
-      dbg(ROUTING_CHANNEL, "ROUTING Channel\n");
+      dbg(ROUTING_CHANNEL, "Print Route of node:%d\n",TOS_NODE_ID);
       for(i =0; i < call Confirmed.size(); i++){
             routing=  call Confirmed.get(i);
-            dbg(ROUTING_CHANNEL, "--The Destination is %d\n  | The Cost is : %d\n  |  The next rout is %d\n", routing.node, routing.cost, routing.nextHop); //add i 
+            dbg(ROUTING_CHANNEL, "--The Destination is %d\n  | The Cost is : %d\n  | The next hop is %d\n", routing.node, routing.cost, routing.nextHop); //add i 
       }
    }
 
@@ -565,6 +566,20 @@ implementation{
       memcpy(Package->payload, payload, length);
    }
 
+   //Helper function to find the vertex with min distance, from set of vertices Not included in shortest path
+    uint16_t minDist(uint16_t Cost[], bool isValid[]){
+        uint16_t min = INFINITY;  // min value
+        uint16_t minIndex = 0; //changing number -> change value of nexthop
+        uint16_t i;
+
+        for(i = 0; i < MAX; i++){
+            if(isValid[i] == FALSE && Cost[i] < min) // was < min
+               // min = Cost[i]; // changed it based on CSE100 Minheap (lab14)
+                minIndex = i;
+                min = Cost[i];
+        }
+        return minIndex;
+    }
    /*
       isKnown bool function check to see if packet is in list of sent/received(seen) packets
    */
@@ -584,11 +599,11 @@ implementation{
 
    //Link State Pack Timer
    event void lspTimer.fired() {        
-     //makeLSP();        
+     makeLSP();        
    }   
    /* makeLSP()
     *  Check Neighbor List
-    *  Make array of neighbors or cost ?
+    *  Make array of neighbors or cost 
     *  Make pack, broadcast, linkstate protocol, array payload
    */
    void makeLSP(){
@@ -596,7 +611,7 @@ implementation{
       //Neighbor temp;
       //uint16_t size = (call NeighborList.size()) + 1;
      // uint16_t linkedNeighbors[size];
-      
+        //uint8_t costList[20]={-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};      
         uint16_t i = 0;       
         Neighbor temp;
         uint16_t size = call Neighbors.size();
@@ -611,104 +626,116 @@ implementation{
 
      // Make our LSP packet and flood it through Broadcast
      //Current,TTL20,LINKSTATE prot, payload = array
-     makePack(&LSP,TOS_NODE_ID,AM_BROADCAST_ADDR,20,PROTOCOL_LINKSTATE,seqNumber++,
+     makePack(&LSP,TOS_NODE_ID,AM_BROADCAST_ADDR,MAX_TTL-1,PROTOCOL_LINKSTATE,++seqNumber,
         (uint8_t*) linkedNeighbors,(uint16_t) sizeof(linkedNeighbors));
      //push pack into our pack list
-     //   - May need to check isKnown for seen LSP packs later/ or make new function
      insertPack(LSP);
      call Sender.send(LSP,AM_BROADCAST_ADDR);
      //dbg(ROUTING_CHANNEL, "LSPNode %d has been flooded\n",TOS_NODE_ID);
       }
   }
 
-// THINK THIS CAN GO IN DMP LINKSTATE
+
  void printLSP(){
     LinkState lsp;
     uint16_t i,j;
     dbg(ROUTING_CHANNEL,"NODE %d LSP Table_______\n",TOS_NODE_ID);
     for (i = 0; i < call RouteTable.size(); i++){
       lsp = call RouteTable.get(i);
-      dbg(GENERAL_CHANNEL, "LSP from %d, Cost: %d, NextHop: %d, Seq: %d, neighbor size: %d\n",
+      dbg(GENERAL_CHANNEL, "Dest: %d, Cost: %d, NextHop: %d, Seq: %d, neighbor size: %d\n",
         lsp.node, lsp.cost, lsp.nextHop, lsp.seq, lsp.arrLength);
       for(j = 0; j < lsp.arrLength; j++){
-        dbg(GENERAL_CHANNEL, "Neighbor at %d\n",lsp.neighbors[j]);
+        //dbg(GENERAL_CHANNEL, "Neighbor at %d\n",lsp.neighbors[j]);
+        if(lsp.neighbors[j] > 0)
+          dbg(GENERAL_CHANNEL, "%d\n", lsp.neighbors[i]);
       }
     }
-    dbg(GENERAL_CHANNEL, "RouteTable size is %d\n", call RouteTable.size());
+   // dbg(GENERAL_CHANNEL, "RouteTable size is %d\n", call RouteTable.size());
   }
-  void Dijkstra(){
-    uint16_t size = call RouteTable.size();
-    uint16_t sizenode[MAX];
-    uint16_t i, j, next, Cost[MAX][MAX], distance[MAX], gray[MAX], list[MAX], count, path, Next1, nextnode;
-    uint16_t mynode =TOS_NODE_ID-1;
-    bool isValid[MAX][MAX];
-    LinkState nextnode1, nextnode2;
+
+  /*
+   *
+   * Dijkstra single source shortest path using adjacency matrix
+   * - Create shortest path tree set(sptSet) that keeps track of vertices included in shortest path tree.
+   *   Initially this set is empty.
+   * - Assign distance value to all vertices. Initialize all dist values as INFINITY and 0 for source vertex.
+   * - While sptSet doesn't include all vertices 
+   *   1. pick vertex u not in sptSet and has min distance value
+   *   2. Add u to sptSet
+   *   3. Update distance value of all adjacent vertices of u. To update distance, iterate through all adjacent vertices
+   *      For every v, if sum of distance of u(from srouce) and cost u->v, is less than dist v, then update dist of v.
+   * source: geeks for geeks shortest path
+  */
+void Dijkstra(){
+        uint16_t G[MAX][MAX];  //Tree: node/cost
+        uint16_t i, path, V, E;
+        uint16_t nextnode = TOS_NODE_ID - 1;
+
+        uint16_t Cost[MAX]; // The output array. dist[i] sill hold he shortest distancec from src to i
+
+        bool isValid[MAX];  // sptSet[i] will be true if vertex i is included in shortest path tree
+
+        int base[MAX];
+        int num;
+        
+        LinkState nextnode2;
+        // Initialize all distance as INFINITE and sptSet as FALSE
+        for(i = 0; i < MAX; i++){
+            Cost[i] = INFINITY;
+            isValid[i] = FALSE;
+            base[i] = -1;   // base case
+        }
+
+        // Distance to own node is always 0
+        Cost[nextnode] = 0;
+        // Find shortest path for all vertices
+        for(path = 0; path < MAX - 1; path++){
+          // Picks min distance vertex from set of vertices not yet processed.
+            V = minDist(Cost, isValid);
+            // Marks chosen vertex as TRUE
+            isValid[V] = TRUE;
+
+            //Update dist value of the adjacent vertices of u(chosen vertex)
+            for(E = 0; E < MAX; E++){
+                //Updates dist[v] only if not in sptSet(not processed)
+                if(!isValid[E] && G[V][E] != INFINITY && Cost[V] + G[V][E] < Cost[E]){
+                    base[E] = V;
+                    Cost[E] = Cost[V] + G[V][E];
+                }
+            }           
+        }
+        //Fill our hashmap
+        for(i = 0; i < MAX; i++){
+            num = i;
+            //parent = -1 basecase; i/temp is source.
+            while(base[num] != -1  && base[num] != nextnode && num < MAX){
+                num = base[num];
+            }
+            if(base[num] != nextnode){
+                call tableroute.insert(i + 1, 0);
+            }
+            else
+            {
+                call tableroute.insert(i + 1, num + 1);
+            }
+        }
+        
+        
+      // Fill our Confirmed List
+      if(call Confirmed.isEmpty()){
+      for(i = 1; i <= 20; i++)
+      {
+        nextnode2.node = i;
+        nextnode2.cost = G[TOS_NODE_ID][i];
+        nextnode2.nextHop = call tableroute.get(i);
+        call Confirmed.pushfront(nextnode2);
+        //dbg(GENERAL_CHANNEL, "Our Confirmed list size:  %d\n", call Confirmed.size());
+      }
+    }
     
-    for(i =0 ; i< MAX; i++){
-      for(j= 0; j< MAX; j++){
-        isValid[i][j]= FALSE;
-      }
     }
-   for(i = 0; i< MAX; i++){
-    nextnode1 = call RouteTable.get(i);
-    for(j = 0; j< MAX; j++){
-      if(isValid[i][j]== FALSE){
-        Cost[i][j]  = INFINITY;
-      }
-      else{
-        Cost[i][j] = 1;
-      }
     }
-   }
-
-   for(i = 0; i < MAX ; i++){
-      distance[i] = Cost[mynode][i];
-      list[i] = mynode;
-      gray[i] =0;
-   }
-   distance[mynode]= 0;
-   gray[mynode] =1;
-   count =1;
-
-   while( count < MAX -1){
-      path= INFINITY;
-      for(i =0; i< MAX; i++){
-        if(distance[i] <= path  && gray[i]==0){
-          path = distance[i];
-          Next1 = i;
-        }
-      }
-      gray[next] = 1;
-      for(i =0 ; i< MAX ; i++){
-        if(gray[i]==0){
-          if(path + Cost[Next1][i] < distance[i]){
-            distance[i] = path + Cost[Next1][i];
-            list[i] = Next1;
-          }
-        }
-      }
-      count++;
-   }
-   for(i = 0; i< MAX; i++){
-    nextnode = TOS_NODE_ID;
-    if(distance[i] != INFINITY){
-      if(i != mynode){
-        j= i;
-        while(j != mynode){
-          if(j!= mynode){
-            nextnode = j;
-          }
-          j =list[i];
-        }
-      }else{
-        nextnode = mynode;
-      }
-      if(nextnode != 0){
-          call tableroute.insert(i , nextnode);
-      }
-    }
-   }
-  }    
 
 
-}
+
+
