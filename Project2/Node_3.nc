@@ -587,15 +587,16 @@ implementation{
    }
 
    //Helper function to find the vertex with min distance, from set of vertices Not included in shortest path
-    uint16_t minDist(uint16_t dist[], bool sptSet[]){
+    uint16_t minDist(uint16_t Cost[], bool isValid[]){
         uint16_t min = INFINITY;  // min value
-        uint16_t minIndex = 18;
+        uint16_t minIndex = 0; //changing number -> change value of nexthop
         uint16_t i;
 
         for(i = 0; i < MAX; i++){
-            if(sptSet[i] == FALSE && dist[i] < min) // was < min
-                min = dist[i];
+            if(isValid[i] == FALSE && Cost[i] < min) // was < min
+               // min = Cost[i]; // changed it based on CSE100 Minheap (lab14)
                 minIndex = i;
+                min = Cost[i];
         }
         return minIndex;
     }
@@ -685,56 +686,58 @@ implementation{
    *      For every v, if sum of distance of u(from srouce) and cost u->v, is less than dist v, then update dist of v.
    * source: geeks for geeks shortest path
   */
-
 void Dijkstra(){
-        uint16_t LSTable[MAX][MAX];  //Tree: node/cost
-        uint16_t myID = TOS_NODE_ID - 1, i, count, v, u;
+        uint16_t G[MAX][MAX];  //Tree: node/cost
+        uint16_t i, path, V, E;
+        uint16_t nextnode = TOS_NODE_ID - 1;
 
-        uint16_t dist[MAX]; // The output array. dist[i] sill hold he shortest distancec from src to i
+        uint16_t Cost[MAX]; // The output array. dist[i] sill hold he shortest distancec from src to i
 
-        bool sptSet[MAX];  // sptSet[i] will be true if vertex i is included in shortest path tree
+        bool isValid[MAX];  // sptSet[i] will be true if vertex i is included in shortest path tree
 
-        int parent[MAX];
-        int temp;
+        int base[MAX];
+        int num;
         
         LinkState nextnode2;
         // Initialize all distance as INFINITE and sptSet as FALSE
         for(i = 0; i < MAX; i++){
-            dist[i] = INFINITY;
-            sptSet[i] = FALSE;
-            parent[i] = -1;   // base case
+            Cost[i] = INFINITY;
+            isValid[i] = FALSE;
+            base[i] = -1;   // base case
         }
 
         // Distance to own node is always 0
-        dist[myID] = 0;
+        Cost[nextnode] = 0;
         // Find shortest path for all vertices
-        for(count = 0; count < MAX - 1; count++){
+        for(path = 0; path < MAX - 1; path++){
           // Picks min distance vertex from set of vertices not yet processed.
-            u = minDist(dist, sptSet);
+            V = minDist(Cost, isValid);
             // Marks chosen vertex as TRUE
-            sptSet[u] = TRUE;
+            isValid[V] = TRUE;
 
             //Update dist value of the adjacent vertices of u(chosen vertex)
-            for(v = 0; v < MAX; v++){
+            for(E = 0; E < MAX; E++){
                 //Updates dist[v] only if not in sptSet(not processed)
-                if(!sptSet[v] && LSTable[u][v] != INFINITY && dist[u] + LSTable[u][v] < dist[v]){
-                    parent[v] = u;
-                    dist[v] = dist[u] + LSTable[u][v];
+                if(!isValid[E] && G[V][E] != INFINITY && Cost[V] + G[V][E] < Cost[E]){
+                    base[E] = V;
+                    Cost[E] = Cost[V] + G[V][E];
                 }
             }           
         }
         
         for(i = 0; i < MAX; i++){
-            temp = i;
+            num = i;
             //parent = -1 basecase; i/temp is source.
-            while(parent[temp] != -1  && parent[temp] != myID && temp < MAX){
-                temp = parent[temp];
+            while(base[num] != -1  && base[num] != nextnode && num < MAX){
+                num = base[num];
             }
-            if(parent[temp] != myID){
+            if(base[num] != nextnode){
                 call tableroute.insert(i + 1, 0);
             }
             else
-                call tableroute.insert(i + 1, temp + 1);
+            {
+                call tableroute.insert(i + 1, num + 1);
+            }
         }
         
         
@@ -743,13 +746,14 @@ void Dijkstra(){
       for(i = 1; i <= 20; i++)
       {
         nextnode2.node = i;
-        nextnode2.cost = LSTable[TOS_NODE_ID][i];
+        nextnode2.cost = G[TOS_NODE_ID][i];
         nextnode2.nextHop = call tableroute.get(i);
         call Confirmed.pushfront(nextnode2);
         //dbg(GENERAL_CHANNEL, "Our Confirmed list size:  %d\n", call Confirmed.size());
       }
     }
     
+    }
     }
 
 /*
@@ -981,4 +985,4 @@ void Dijkstra(){
 */
 
 
-}
+
