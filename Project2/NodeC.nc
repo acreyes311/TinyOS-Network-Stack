@@ -52,8 +52,8 @@ implementation {
     Node.periodicTimer -> periodicTimerC;    //Wire interface to component
     
     // ----- PROJECT2 -------
-    components new ListC(LinkState,64) as TentativeC;
-    Node.Tentative -> TentativeC;
+   // components new ListC(LinkState,64) as TentativeC;
+    //Node.Tentative -> TentativeC;
 
     components new ListC(LinkState,64) as ConfirmedC;
     Node.Confirmed -> ConfirmedC;
@@ -64,11 +64,11 @@ implementation {
     components new ListC(LinkState,64) as routeTempC;
     Node.routeTemp -> routeTempC;
 
-    components new ListC(LinkState,64) as tempLSC;
-    Node.tempLS -> tempLSC;
-
-    components new HashmapC(int, 64) as tablerouteC;
+    components new HashmapC(int,64) as tablerouteC;
     Node.tableroute -> tablerouteC;
+
+    //components new ListC(LinkState,64) as tempLSC;
+    //Node.tempLS -> tempLSC;
 
     components new TimerMilliC() as lspTimerC;
     Node.lspTimer -> lspTimerC;
