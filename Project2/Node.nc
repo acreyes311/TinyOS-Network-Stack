@@ -387,7 +387,7 @@ implementation{
                       if(call RouteTable.isEmpty()){                    
                         call RouteTable.pushfront(LSP);
                       }
-                      //printLSP();
+                      
                       seqNumber++;
                       makePack(&sendPackage, myMsg->src, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_LINKSTATE,
                         seqNumber, (uint8_t*)myMsg->payload, (uint8_t)sizeof(myMsg->payload));
@@ -494,9 +494,7 @@ implementation{
         if(ls.node == destination){
           dest = ls.nextHop;
         }
-        //if(dest == 0){
-         // dest = AM_BROADCAST_ADDR;
-       // }
+
       }
       //sendPackage.seq = sendPackage.seq + 1;
       //makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, sendPackage.seq, payload, PACKET_MAX_PAYLOAD_SIZE);
@@ -597,7 +595,7 @@ implementation{
 
    //Link State Pack Timer
    event void lspTimer.fired() {        
-     makeLSP();        
+     //makeLSP();        
    }   
    /* makeLSP()
     *  Check Neighbor List
@@ -606,10 +604,7 @@ implementation{
    */
    void makeLSP(){
       pack LSP;
-      //Neighbor temp;
-      //uint16_t size = (call NeighborList.size()) + 1;
-     // uint16_t linkedNeighbors[size];
-        //uint8_t costList[20]={-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};      
+    
         uint16_t i = 0;       
         Neighbor temp;
         uint16_t size = call Neighbors.size();
@@ -654,14 +649,14 @@ implementation{
   /*
    *
    * Dijkstra single source shortest path using adjacency matrix
-   * - Create shortest path tree set(sptSet) that keeps track of vertices included in shortest path tree.
+   * - Create shortest path tree set(isValid) that keeps track of vertices included in shortest path tree.
    *   Initially this set is empty.
    * - Assign distance value to all vertices. Initialize all dist values as INFINITY and 0 for source vertex.
    * - While sptSet doesn't include all vertices 
-   *   1. pick vertex u not in sptSet and has min distance value
-   *   2. Add u to sptSet
-   *   3. Update distance value of all adjacent vertices of u. To update distance, iterate through all adjacent vertices
-   *      For every v, if sum of distance of u(from srouce) and cost u->v, is less than dist v, then update dist of v.
+   *   1. pick vertex V not in sptSet and has min distance value
+   *   2. Add V to isValid
+   *   3. Update distance value of all adjacent vertices of V. To update distance, iterate through all adjacent vertices
+   *      For every E, if sum of distance of V(from srouce) and cost V->E, is less than dist E, then update dist of E.
    * source: geeks for geeks shortest path
   */
 void Dijkstra(){
