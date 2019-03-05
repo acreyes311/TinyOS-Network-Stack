@@ -159,8 +159,8 @@ def main():
     s.runTime(50);
     s.routeDMP(15);
     s.runTime(50);
-    s.routeDMP(19);
-    s.runTime(50);
+    #s.routeDMP(19);
+    #s.runTime(50);
 
     s.moteOff(7); #turns off node 7
     s.runTime(50);
