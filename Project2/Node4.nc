@@ -158,7 +158,7 @@ implementation{
         //life = temp.life;
 
         // Drop expired neighbors after 3 pings and put in DroppedList
-        if (temp.life > 5) {
+        if (temp.life > 3) {
           line = call Neighbors.remove(i);
           call Neighbors.remove(i); 
           //dbg(NEIGHBOR_CHANNEL,"Neighbor %d has EXPIRED and DROPPED from Node %d\n",line.nodeID,TOS_NODE_ID);
@@ -232,7 +232,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
     { 
        if (myMsg->protocol == PROTOCOL_PING)
         {
-           makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL--, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
+           makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
             insertPack(sendPackage);
             call Sender.send(sendPackage, myMsg->src);
         } 
@@ -360,7 +360,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
             if (temp.node== myMsg->dest)
             {       
               //dbg(FLOODING_CHANNEL, "Packet from %d, intended for %d is being Rebroadcasted.\n", myMsg->src, myMsg->dest);
-                makePack(&sendPackage, myMsg->src, temp.nextHop, myMsg->TTL--, myMsg->protocol, myMsg->seq, ((uint8_t *)myMsg-> payload), PACKET_MAX_PAYLOAD_SIZE);
+                makePack(&sendPackage, myMsg->src, temp.nextHop, myMsg->TTL-1, myMsg->protocol, myMsg->seq, ((uint8_t *)myMsg-> payload), PACKET_MAX_PAYLOAD_SIZE);
                 insertPack(sendPackage);
                 call Sender.send(sendPackage, AM_BROADCAST_ADDR);
                  break;
@@ -388,8 +388,8 @@ event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
       }
       //sendPackage.seq = sendPackage.seq + 1;
       //makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, sendPackage.seq, payload, PACKET_MAX_PAYLOAD_SIZE);
-      makePack(&sendPackage, TOS_NODE_ID, destination, 20, 0, ++seqNumber, payload, PACKET_MAX_PAYLOAD_SIZE);
-      call Sender.send(sendPackage, dest); // send to destination
+      makePack(&sendPackage, TOS_NODE_ID, destination, 20, 0, seqNumber+1, payload, PACKET_MAX_PAYLOAD_SIZE);
+      call Sender.send(sendPackage, AM_BROADCAST_ADDR); // send to destination
       //seqNumber = seqNumber + 1;
       
    }
