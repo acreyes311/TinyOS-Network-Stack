@@ -119,7 +119,7 @@ implementation{
     * neighborList() function Loops through our neighbor list if not empty
     * and increase the life/pings/life of each neighbor (number of pings since they were last heard)
     * Check list again for any Neighbor with life > 3 and drop them as expired. Add to Drop list
-    * Repackage ping with AM_BROADCASE_ADDR as destination   
+    * Repackage ping with AM_BROADCAST_ADDR as destination   
    */
    void neighborList() {
     //pack package;
@@ -397,12 +397,7 @@ implementation{
 
                     }
                     //If no match to protocol LINKSTATE
-                  /*
-                    -If no Match make; Make LSP table and flood it if node hasn't seen
-                    -If no match between packet src and TOS_ID
-                        ->then Unique nodeID for RouteTable
-                        ->Store and replace with lowest cost
-                  */
+                  
                     //dbg(GENERAL_CHANNEL,"AT END OF LS SWITCH!!!\n");
                     if(!match){ 
                     //             
@@ -414,7 +409,7 @@ implementation{
           }
 
           // ---------NOT ENTERING HERE ------------
-
+          // Reached Destination
        if(myMsg->dest == TOS_NODE_ID) //|| myMsg->protocol == PROTOCOL_PINGREPLY)) 
          {
             dbg(FLOODING_CHANNEL,"Packet #%d arrived from %d with payload: %s\n", myMsg->seq, myMsg->src, myMsg->payload);
@@ -459,6 +454,7 @@ implementation{
       
          // Packet does not belong to current node 
          // Flood Packet with TTL - 1
+         // broadcast to neighbors
          else {
           uint16_t k = 0;
           uint16_t snd = 0;
@@ -498,7 +494,9 @@ implementation{
         if(ls.node == destination){
           dest = ls.nextHop;
         }
-
+        //if(dest == 0){
+         // dest = AM_BROADCAST_ADDR;
+       // }
       }
       //sendPackage.seq = sendPackage.seq + 1;
       //makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, sendPackage.seq, payload, PACKET_MAX_PAYLOAD_SIZE);
@@ -671,15 +669,15 @@ void Dijkstra(){
         uint16_t i, path, V, E;
         uint16_t nextnode = TOS_NODE_ID - 1;
 
-        uint16_t Cost[MAX]; // The output array. dist[i] sill hold he shortest distancec from src to i
+        uint16_t Cost[MAX]; // The output array. Cost[i] sill hold he shortest distancec from src to i
 
-        bool isValid[MAX];  // sptSet[i] will be true if vertex i is included in shortest path tree
+        bool isValid[MAX];  // isValid[i] will be true if vertex i is included in shortest path tree
 
         int base[MAX];
         int num;
         
         LinkState nextnode2;
-        // Initialize all distance as INFINITE and sptSet as FALSE
+        // Initialize all distance as INFINITE and isValid (shortest path tree Set) as FALSE
         for(i = 0; i < MAX; i++){
             Cost[i] = INFINITY;
             isValid[i] = FALSE;
@@ -695,7 +693,7 @@ void Dijkstra(){
             // Marks chosen vertex as TRUE
             isValid[V] = TRUE;
 
-            //Update dist value of the adjacent vertices of u(chosen vertex)
+            //Update Cost value of the adjacent vertices of v(chosen vertex)
             for(E = 0; E < MAX; E++){
                 //Updates dist[v] only if not in sptSet(not processed)
                 if(!isValid[E] && G[V][E] != INFINITY && Cost[V] + G[V][E] < Cost[E]){
