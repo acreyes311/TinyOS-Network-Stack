@@ -80,6 +80,7 @@ implementation{
    uint16_t lspCount = 0;
    Neighbor NewNeighbor;
    Neighbor TempNeighbor;
+   socket_t fd; // Global fd/socket
 
    // Prototypes
    bool isKnown(pack *p);  // already seen function
@@ -490,6 +491,7 @@ implementation{
     LinkState ls;
     uint16_t dest;
      dbg(GENERAL_CHANNEL, "PING EVENT \n");
+    
       for (i = 0; i < call Confirmed.size(); i++){
         ls = call Confirmed.get(i);
         if(ls.node == destination){
@@ -497,21 +499,22 @@ implementation{
         }
 
       }
+      
       //sendPackage.seq = sendPackage.seq + 1;
       //makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, sendPackage.seq, payload, PACKET_MAX_PAYLOAD_SIZE);
       makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, seqNumber+1, payload, PACKET_MAX_PAYLOAD_SIZE);
       // Changed from BROADCAST
-      call Sender.send(sendPackage, dest); // send to destination
+      insertPack(sendPackage);
+      call Sender.send(sendPackage, dest);
+      //if(call tableroute.get(destination)) {
+        //call Sender.send(sendPackage, call tableroute.get(destination)); // send to destination
+    //}
      // seqNumber = seqNumber + 1;
       
    }
 
    event void CommandHandler.printNeighbors(){
-    //go in your neighbor list
-    //and print out that list
-    //that list should be your neighbor ids.
-    //neighborList(TOS_NODE_ID);
-    //3 , 5
+
     Neighbor nextneightbor;
       uint16_t i=0;
       uint16_t size;
@@ -547,9 +550,58 @@ implementation{
 
    event void CommandHandler.printDistanceVector(){}
 
-   event void CommandHandler.setTestServer(){}
+   /* ----- Set Test Server -----
+    * Initiates server at node[address] and binds it to [port]
+    * Listens for connections
+    * If accepted a new socket is made for that connection and server continues to listen
+   */
+   event void CommandHandler.setTestServer(uint16_t port){
+    socket_addr_t address;
+    //socket_t fd;  // global fd up top
 
-   event void CommandHandler.setTestClient(){}
+    dbg(GENERAL_CHANNEL, "inside setTestServer -- Initializing Server\n");
+
+    address.addr = TOS_NODE_ID;
+    address.port = port;
+
+    fd = call Transport.socket();
+
+
+    if(call Transport.bind(fd, &address) == SUCCESS && call Transport.listen(fd) == SUCCESS)
+      dbg(TRANSPORT_CHANNEL, "Socket %d is Listening.\n", fd);
+    else
+      dbg(TRANSPORT_CHANNEL, "Unable to set socket %d.\n", fd);
+
+   }
+
+   /* ----- Set Test Client -----
+    * Initiates client and binds it to [srcPort], attempts to make connection to [dest] at port [destPort]
+    * After Connection, send [transfer] bytes to server
+   */
+   event void CommandHandler.setTestClient(uint16_t dest, uint16_t srcPort, uint16_t destPort, uint16_t transfer){
+    socket_addr_t address;  // socket address
+    socket_addr_t serverAdr;  // server address
+
+    dbg(TRANSPORT_CHANNEL, "Inside setTestClient -- Testing Client.\n");
+
+    fd = call Transport.socket();
+
+    // Source and source port
+    address.addr = TOS_NODE_ID;
+    address.port = srcPort;
+    // Destination and dest port
+    serverAdr.addr = dest;
+    serverAdr.port = destPort;
+
+    if(call Transport.bind(fd, &address) == SUCCESS) {
+      dbg(TRANSPORT_CHANNEL, "Client success.\n");
+    }
+    call Transport.connect(fd, &serverAdr);
+
+    dbg(TRANSPORT_CHANNEL, "Node %d is client with source port %d, and dest %d at their port %d.\n",
+      TOS_NODE_ID, srcPort, dest, destPort);
+
+   }
 
    event void CommandHandler.setAppServer(){}
 
