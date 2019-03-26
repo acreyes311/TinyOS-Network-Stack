@@ -11,4 +11,8 @@ implementation {
 	components new SimpleSendC(AM_PACK);
 	TransportP.Sender -> SimpleSendC;
 
+	// Our list of sockets
+	components new ListC(socket_store_t, 10) as SocketListC;
+	TransportP.SocketList -> SocketListC;
+
 }
