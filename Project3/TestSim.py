@@ -143,6 +143,7 @@ def main():
     s.addChannel(s.FLOODING_CHANNEL);
     s.addChannel(s.NEIGHBOR_CHANNEL);
     s.addChannel(s.ROUTING_CHANNEL); # added for projet2
+    s.addChannel(s.TRANSPORT_CHANNEL); # project 3
 
     s.runTime(500);
     s.ping(12,17, "Hello, World, 12-17");
