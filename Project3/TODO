@@ -1,8 +1,9 @@
 
 Implement transportC.nc and transportP.nc under lib/modules
-
-- Setup and teardown
+ - The ones we need to work on for sure: socket, bind, listen, connect
  
-
-
+- Setup and teardown
 - Start of data transfer, stop and wait
+
+- Started working on setTestClient andd setTestServer. Haven't implemented timers that go inside those functions yet.
+Still not too sure what exactly we have to implement for the mid review yet.
