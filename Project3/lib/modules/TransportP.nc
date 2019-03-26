@@ -109,6 +109,7 @@ implementation {
     socket_store_t tempSocket;
     int i;
 
+    //Loop through Socket List and find socket fd to bind
     for (i = 0; i < call SocketList.size();i++) {
         tempSocket = call SocketList.get.(i);
 
@@ -116,8 +117,9 @@ implementation {
             //Get Socket from list. Modify. And re-insert
             tempSocket = call SocketList.remove(i);
 
+            //socket_port_t src; / socket_addr_t dest;
             tempSocket.src = addr->port;
-            tempSocket.dest = *addr;
+            tempSocket.dest = *addr; // dest is socket_addr_t so assign all addr
 
             call SocketList.pushback (tempSocket);
 
@@ -127,9 +129,10 @@ implementation {
         }
     }
     // Otherwise return FAIL
+    dbg(TRANSPORT_CHANNEL, "Failed bind.\n");
     return FAIL;
-
    } // END OF BIND
+
 
    /**
     * Checks to see if there are socket connections to connect to and
@@ -144,8 +147,24 @@ implementation {
     *    if not return a null socket.
     */
    command socket_t Transport.accept(socket_t fd) {
+    socket_store_t temp;
+    //bool flag;
+    //socket_t tempfd;
+    int i;
+    // loop through list checking for matching fd and if Listening
+    for(i = 0; i < call SocketList.size(); i++){
+        tempSocket = call SocketList.get(i);
+        // Check if listening
+        if(fd == temp.fd && temp.state == LISTEN) {
+            dbg(TRANSPORT_CHANNEL, "Socket Accept Successfull.\n");
+            return temp.fd;
+        }
+    }
+    //Otherwise return NULL
+    dbg(TRANSPORT_CHANNEL, "Socket %d accept failed. Returning NULL.\n", fd);
+    return NULL;
+   } // End accept
 
-   }
 
    /**
     * Write to the socket from a buffer. This data will eventually be
