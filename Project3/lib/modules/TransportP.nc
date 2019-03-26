@@ -44,6 +44,8 @@ typedef struct socket_store_t{
 module TransportP{
     provides interface Transport;
 
+    uses interface List<socket_store_t> as SocketList;
+
 }
 
 
@@ -57,8 +59,39 @@ implementation {
     *    a socket then return a NULL socket_t.
     */
    command socket_t Transport.socket(){
+    socket_t fd;    // fd ID
+    socket_store_t tempSocket;  // socket
 
-   }
+    if(call SocketList.size() < MAX_NUM_SOCKETS) { // < 10
+        // Gets the FD id of last index in list
+        tempSocket.fd = call SocketList.size();
+        fd = call SocketList.size();
+
+        //Initialize socket with default values
+        tempSocket.socket_state = CLOSED;
+        tempSocket.lastWritten = 0;
+        tempSocket.lastAck = 0;
+        tempSocket.lastSent = 0;
+        tempSocket.lastRead = 0;
+        tempSocket.lastRcvd = 0;
+        tempSocket.nextExpected = 0;
+        tempSocket.RTT = 0;
+        tempSocket.effectiveWindow = SOCKET_BUFFER_SIZE; // 128
+
+        //Push into socket list
+        call SocketList.pushback(tempSocket);
+
+        dbg(TRANSPORT_CHANNEL, "Got Socket.\n");
+
+        return tempSocket.fd;   // Returns the fd id
+    }
+
+    else {
+        dbg(TRANSPORT_CHANNEL, "No socket allocated. Returning NULL.\n");
+        return NULL;
+    }
+   }// END socket()
+
 
    /**
     * Bind a socket with an address.
@@ -73,8 +106,30 @@ implementation {
     *       if you were unable to bind.
     */
    command error_t Transport.bind(socket_t fd, socket_addr_t *addr) {
+    socket_store_t tempSocket;
+    int i;
 
-   }
+    for (i = 0; i < call SocketList.size();i++) {
+        tempSocket = call SocketList.get.(i);
+
+        if(fd == tempSocket.fd) {
+            //Get Socket from list. Modify. And re-insert
+            tempSocket = call SocketList.remove(i);
+
+            tempSocket.src = addr->port;
+            tempSocket.dest = *addr;
+
+            call SocketList.pushback (tempSocket);
+
+            dbg(TRANSPORT_CHANNEL, "Socket Bind Successfull./n");
+
+            return SUCCESS;
+        }
+    }
+    // Otherwise return FAIL
+    return FAIL;
+
+   } // END OF BIND
 
    /**
     * Checks to see if there are socket connections to connect to and
