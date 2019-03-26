@@ -14,6 +14,33 @@
  * @date
  *   2013/11/12
  */
+
+ /*
+// State of a socket. 
+typedef struct socket_store_t{
+    uint8_t flag;
+    enum socket_state state;
+    socket_port_t src;
+    socket_addr_t dest;
+
+    // This is the sender portion.
+    uint8_t sendBuff[SOCKET_BUFFER_SIZE];
+    uint8_t lastWritten;
+    uint8_t lastAck;
+    uint8_t lastSent;
+
+    // This is the receiver portion
+    uint8_t rcvdBuff[SOCKET_BUFFER_SIZE];
+    uint8_t lastRead;
+    uint8_t lastRcvd;
+    uint8_t nextExpected;
+
+    uint16_t RTT;
+    uint8_t effectiveWindow;
+}socket_store_t;
+
+*/
+
 module TransportP{
     provides interface Transport;
 
