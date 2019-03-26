@@ -1,6 +1,6 @@
 
 Implement transportC.nc and transportP.nc under lib/modules
- - The ones we need to work on for sure: socket, bind, listen, connect
+ - The ones we need to work on for sure: socket, bind, listen, connect; maybe accept and close?
  
 - Setup and teardown
 - Start of data transfer, stop and wait
