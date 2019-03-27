@@ -1,5 +1,7 @@
-#include "../../packet.h"
+#include "../../includes/packet.h"
 #include "../../includes/socket.h"
+#include "../../includes/channels.h"
+#include "../../includes/sendInfo.h"
 
 /**
  * The Transport interface handles sockets and is a layer of abstraction
@@ -44,6 +46,7 @@ typedef struct socket_store_t{
 module TransportP{
     provides interface Transport;
 
+    uses interface SimpleSend as Sender;    
     uses interface List<socket_store_t> as SocketList;
 
 }
@@ -62,13 +65,13 @@ implementation {
     socket_t fd;    // fd ID
     socket_store_t tempSocket;  // socket
 
-    if(call SocketList.size() < MAX_NUM_SOCKETS) { // < 10
+    if(call SocketList.size() < MAX_NUM_OF_SOCKETS) { // < 10
         // Gets the FD id of last index in list
         tempSocket.fd = call SocketList.size();
         fd = call SocketList.size();
 
         //Initialize socket with default values
-        tempSocket.socket_state = CLOSED;
+        tempSocket.state = CLOSED;
         tempSocket.lastWritten = 0;
         tempSocket.lastAck = 0;
         tempSocket.lastSent = 0;
@@ -107,11 +110,11 @@ implementation {
     */
    command error_t Transport.bind(socket_t fd, socket_addr_t *addr) {
     socket_store_t tempSocket;
-    int i;
+    uint16_t i;
 
     //Loop through Socket List and find socket fd to bind
-    for (i = 0; i < call SocketList.size();i++) {
-        tempSocket = call SocketList.get.(i);
+    for (i = 0; i < call SocketList.size(); i++) {
+        tempSocket = call SocketList.get(i);
 
         if(fd == tempSocket.fd) {
             //Get Socket from list. Modify. And re-insert
@@ -153,7 +156,7 @@ implementation {
     int i;
     // loop through list checking for matching fd and if Listening
     for(i = 0; i < call SocketList.size(); i++){
-        tempSocket = call SocketList.get(i);
+        temp = call SocketList.get(i);
         // Check if listening
         if(fd == temp.fd && temp.state == LISTEN) {
             dbg(TRANSPORT_CHANNEL, "Socket Accept Successfull.\n");
