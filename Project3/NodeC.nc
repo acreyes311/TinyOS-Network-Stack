@@ -73,4 +73,8 @@ implementation {
     components new TimerMilliC() as lspTimerC;
     Node.lspTimer -> lspTimerC;
 
+    // ---- Project 3 -----
+    components TransportC;
+    Node.Transport -> TransportC;
+
 }

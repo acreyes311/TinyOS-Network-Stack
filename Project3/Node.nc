@@ -14,6 +14,8 @@
 #include "includes/CommandMsg.h"
 #include "includes/sendInfo.h"
 #include "includes/channels.h"
+#include "includes/socket.h"
+
 #define INFINITY 9999
 #define MAX 10
 
@@ -51,6 +53,8 @@ module Node{
    uses interface SimpleSend as Sender;
 
    uses interface CommandHandler;
+
+   uses interface Transport; //Project 3
 
    //Added Modules
    uses interface Timer<TMilli> as periodicTimer;  // Interface wired in NodeC.nc
