@@ -126,7 +126,7 @@ implementation {
 
             call SocketList.pushback (tempSocket);
 
-            dbg(TRANSPORT_CHANNEL, "Socket Bind Successfull./n");
+            dbg(TRANSPORT_CHANNEL, "Socket Bind Successful.\n");
 
             return SUCCESS;
         }
