@@ -13,6 +13,8 @@ class TestSim:
     CMD_PING = 0
     CMD_NEIGHBOR_DUMP = 1
     CMD_ROUTE_DUMP=3
+    CMD_TEST_CLIENT = 4
+    CMD_TEST_SERVER = 5
 
     # CHANNELS - see includes/channels.h
     COMMAND_CHANNEL="command";
@@ -129,6 +131,12 @@ class TestSim:
         print 'Adding Channel', channelName;
         self.t.addChannel(channelName, out);
 
+    def TestServer(self, address, port):
+        self.sendCMD(self.CMD_TEST_SERVER, address, chr(port));
+
+    def TestClient(self, source, sourcePort, destPort, dest, transfer):
+        self.sendCMD(self.CMD_TEST_CLIENT, source, "{0}{1}{2}{3}".format(chr(dest),chr(sourcePort),chr(destPort),transfer));
+
 
 
 def main():
@@ -148,37 +156,32 @@ def main():
     s.runTime(500);
     s.ping(12,17, "Hello, World, 12-17");
     s.runTime(50);
+
+    s.TestServer(2,80);
+    s.runTime(50);
+    s.TestClient(3,64,60,2,8);
+    s.runTime(50);
+
     #s.ping(3, 9, "Hi!!! 3-9");
     #s.runTime(40);
 
-    #s.neighborDMP(5);
-    #s.runTime(50);
-    #s.neighborDMP(12);
-    #s.runTime(50);
-
-    #s.routeDMP(10);
-   # s.runTime(50);
-    #s.routeDMP(15);
-    #s.runTime(50);
-    s.routeDMP(5);
-    s.runTime(50);
 
     #s.moteOff(7); #turns off node 7
     #s.runTime(50);
 
-    s.ping(5,8,"---Test message---");
-    s.runTime(100);
+    # s.ping(5,8,"---Test message---");
+    # s.runTime(100);
 
-    i=0;
-    for i in range(1,s.numMote+1):
-        s.neighborDMP(i);
-        s.runTime(50);
-        print("\n")
-    j = 0;
-    for j in range(1,s.numMote+1):
-        s.routeDMP(j);
-        s.runTime(50);
-        print("\n")
+    # i=0;
+    # for i in range(1,s.numMote+1):
+    #     s.neighborDMP(i);
+    #     s.runTime(50);
+    #     print("\n")
+    # j = 0;
+    # for j in range(1,s.numMote+1):
+    #     s.routeDMP(j);
+    #     s.runTime(50);
+    #     print("\n")
 
 
 if __name__ == '__main__':
