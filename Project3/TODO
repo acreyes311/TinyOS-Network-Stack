@@ -1,12 +1,14 @@
 
 Implement transportC.nc and transportP.nc under lib/modules
- * The ones we need to work on for sure: socket, bind, listen, connect; maybe accept and close
+ * The ones we need to work on for sure: socket, bind, listen, connect; maybe accept and close (maybe read)
  3/26/19 - Did socket bind and accept. Not sure if they work. I guess we can test once everything is done? 
            Still need listen connect and close.
+           
+* 3/28/19 - Need to work on the Timer (acceptTimer and writtenTimer(not sure about writtenTimer))
 
- 
 * Setup and teardown
 *** Start of data transfer, using simplest to implement stop and wait protocol. 
 
-* Started working on setTestClient andd setTestServer. Haven't implemented timers that go inside those functions yet.
+* Started working on setTestClient andd setTestServer. (Haven't implemented timers that go inside those functions yet.)
 Still not too sure what exactly we have to implement for the mid review yet.
+
