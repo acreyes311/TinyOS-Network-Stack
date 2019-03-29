@@ -197,24 +197,36 @@ implementation{
     //    add to list of accepted sockets
     //  for all socket added
     //    read data and print
-    /*
+    
     event void acceptTimer.fired() {
-          int i,size;
+          int i,size,length;
           socket_t newfd;
-          newfd = call Transport.accept();
+          fd = call Transport.accept(fd);
           size =call Socketlist.size();
-          if(newfd != NULL){
-            //if the socketsize is bigger than total sockets ize then print"socket is full"
-            // else sockets are saved
-            call Socketlist.pushback(fd);
-
+          if(fd != (socket_t)NULL)
+          {
+            //if the socketsize is smaller than total socket size, then sockets are saved
+            //else  size then print"socket is full"
+            if(size < 10){
+              dbg(GENERAL_CHANNEL, "Saved new FD", fd);
+              call Socketlist.pushback(fd);
+            }
+            else{
+                 dbg(GENERAL_CHANNEL, "Socket is FULL");
+            }
+            //read data and print
+               //newfd = call Socketlist.get(fd);
             for(i=0; i<size; i++){
-              //read data and print
+              newfd = call Socketlist.get(i);
+              //length = call Transport.read(fd,buff, bufflen);
               //maybe need to implement read in TransportP.nc
             }
-
+          }
+          else{
+            dbg(GENERAL_CHANNEL, "new Fd is NULL");
           }
     }
+    
     //based on Psuedocode
     //timer fired
     //  if all data has been written on the buffer empty
@@ -225,7 +237,7 @@ implementation{
 
 
     }
-  */
+  
 
    event void AMControl.startDone(error_t err){
       if(err == SUCCESS){
