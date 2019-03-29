@@ -91,7 +91,7 @@ implementation {
 
     else {
         dbg(TRANSPORT_CHANNEL, "No socket allocated. Returning NULL.\n");
-        return NULL;
+        return (socket_t)NULL;
     }
    }// END socket()
 
@@ -165,7 +165,7 @@ implementation {
     }
     //Otherwise return NULL
     dbg(TRANSPORT_CHANNEL, "Socket %d accept failed. Returning NULL.\n", fd);
-    return NULL;
+    return (socket_t)NULL;
    } // End accept
 
 
