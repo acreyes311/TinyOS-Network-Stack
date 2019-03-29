@@ -860,7 +860,7 @@ void Dijkstra(){
     // ------------------ CHANGE TO SWITCH TO HANDLE 3-WAY HANDSHAKE ---------------
     //Find right socket
     for(i = 0; i < MAX_NUM_OF_SOCKETS; i++){
-      tempSocket = call Transport.getSocket(i);
+      tempSocket = call Socketlist.get(i);
       // Check for Port and Source; Listening; And Check Flag 1 for SYN.
       // If Found send a SYN_ACK
       if(receivedSocket->flag == 1) {
@@ -917,7 +917,7 @@ void Dijkstra(){
       else if(receivedSocket->flag == 3){
         dbg(TRANSPORT_CHANNEL,"Received ACK.\n");
 
-        tempSocket = call Transport.getSocket(i);
+        tempSocket = call Socketlist.get(i);
 
         tempSocket.state = ESTABLISHED;
 
