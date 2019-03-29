@@ -807,19 +807,19 @@ void Dijkstra(){
     receivedSocket = myMsg->payload;
 
     //Get our Next Destination
-
+    // ------------------ CHANGE TO SWITCH TO HANDLE 3-WAY HANDSHAKE ---------------
     //Find right socket
     for(i = 0; i < MAX_NUM_OF_SOCKETS; i++){
       tempSocket = call Transport.getSocket(i);
       // Check for Port and Source; Listening; And Check Flag 1 for SYN.
       // If Found send a SYN_ACK
       if(receivedSocket->flag == 1) {
-        // Update Socket State
+        // Update Socket State and Bind
         tempSocket.flag = 2;
         tempSocket.dest.port = receivedSocket->src;
         tempSocket.dest.addr = myMsg->src;
         tempSocket.state = SYN_RCVD;
-        call Transport.bind(tempSocket.fd, tempSocket);
+        call Transport.bind(tempSocket.fd, tempSocket); // Change to setSocket/Update
 
         //Make our SYN_ACK
         makePack(&SynAckPack, TOS_NODE_ID, myMsg->src, myMsg->TTL, PROTOCOL_TCP, myMsg->seq, &tempSocket, (uint8_t)sizeof(tempSocket));
@@ -838,7 +838,41 @@ void Dijkstra(){
         //else
           //dbg(TRANSPORT_CHANNEL, "Cant find route to client.\n");
         call Sender.send(SynAckPack,next);  //aye
+        
       }//end if
+
+      // Flag2: SYN_ACK packet
+      else if(receivedSocket->flag == 2){
+        // Pack to reply to the SYN_ACK; Connection has been ESTABLISHED
+        pack AckPack;
+
+        dbg(TRANSPORT_CHANNEL,"Received SYN_ACK.\n");
+
+        //Update Socket State and Bind
+        tempSocket.flag = 3;
+        tempSocket.dest.port = receivedSocket->src;
+        tempSocket.dest.addr = myMsg->src;
+        tempSocket.state = ESTABLISHED;
+        call Transport.bind(tempSocket.fd, tempSocket); // Change to setSocket/Update
+
+        //Make ACK packet
+        makePack(&AckPack, TOS_NODE_ID, myMsg->src, myMsg->TTL, PROTOCOL_TCP, myMsg->seq, &tempSocket, (uint8_t)sizeof(tempSocket));
+
+        dbg(TRANSPORT_CHANNEL,"SYN_ACK received, connection ESTABLISHED, replying with ACK.\n");
+
+        call Sender.send(AckPack, call tableroute.get(tempSocket.dest.addr));       
+
+
+      }
+      else if(receivedSocket->flag == 3){
+        dbg(TRANSPORT_CHANNEL,"Received ACK.\n");
+
+        tempSocket = call Transport.getSocket(i);
+
+        tempSocket.state = ESTABLISHED;
+
+        call Transport.bind(tempSocket.fd, tempSocket); // Change to setSocket/Update
+      }
     }//end for
   }
 
