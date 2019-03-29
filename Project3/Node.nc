@@ -59,7 +59,10 @@ module Node{
    //Added Modules
    uses interface Timer<TMilli> as periodicTimer;  // Interface wired in NodeC.nc
    uses interface Random as Random; //used to avoid timer interruption/congestion
-
+   //project 3 timer
+   uses interface Timer<TMilli> as acceptTimer;
+   uses interface Timer<TMilli> as writtenTimer;
+   
    // Will need List of packets and Neighbors 
    uses interface List<pack> as Packets;  // List of Packets
    uses interface List<Neighbor > as Neighbors;   // List of Known Neighbors
@@ -187,7 +190,42 @@ implementation{
        if(lspCount == 17)
           Dijkstra();                          
    }
+//based on Psuedocode
+   //timer fired
+    //  int newFd = accept();
+    //  if newFd not NULL_SOCKET
+    //    add to list of accepted sockets
+    //  for all socket added
+    //    read data and print
+    /*
+    event void acceptTimer.fired() {
+          int i,size;
+          socket_t newfd;
+          newfd = call Transport.accept();
+          size =call Socketlist.size();
+          if(newfd != NULL){
+            //if the socketsize is bigger than total sockets ize then print"socket is full"
+            // else sockets are saved
+            call Socketlist.pushback(fd);
 
+            for(i=0; i<size; i++){
+              //read data and print
+              //maybe need to implement read in TransportP.nc
+            }
+
+          }
+    }
+    //based on Psuedocode
+    //timer fired
+    //  if all data has been written on the buffer empty
+    //    create new data for the buffer
+    //    //data is from 0 to [transfer]
+    //subtract the amount of data you were able to write(fd, buffer, buffer len)
+    event void writtenTimer.fired() {
+
+
+    }
+  */
 
    event void AMControl.startDone(error_t err){
       if(err == SUCCESS){
