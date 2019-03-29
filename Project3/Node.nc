@@ -97,6 +97,8 @@ implementation{
    uint16_t minDist(uint16_t Cost[], bool isValid[]);
    //void Dijkstra(uint8_t Destination, uint8_t Cost, uint8_t NextHop);
    void printLSP();
+   // ---------Project 3 -----------//
+   void TCPProtocol(pack *myMsg);
    
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
@@ -418,15 +420,9 @@ implementation{
        if(myMsg->dest == TOS_NODE_ID) //|| myMsg->protocol == PROTOCOL_PINGREPLY)) 
          {
             dbg(FLOODING_CHANNEL,"Packet #%d arrived from %d with payload: %s\n", myMsg->seq, myMsg->src, myMsg->payload);
-            // dont push PROTOCOL_CMD into list, will not allow same node to send multiple pings
-           //if(myMsg->protocol != PROTOCOL_CMD) {
-               //insertPack(*myMsg); // push non protol_cmd into packet list
-            //}
 
             // Protocol Ping forwards to nextHop from our Confirmed List
             if( myMsg->protocol == PROTOCOL_PING ){
-
-            /////BEGIN CHECKING FLOODING PROTOCOLS////
 
             // PROTOCOL_PING: packet was pinged but no reply
             //if(myMsg->protocol == PROTOCOL_PING) {
@@ -453,6 +449,9 @@ implementation{
             // PROTOCOL PINGREPLY: Packet at correct destination; Stop sending packet
             if(myMsg->protocol == PROTOCOL_PINGREPLY) {
                dbg(FLOODING_CHANNEL, "PING REPLY RECEIVED FROM %d\n ",myMsg->src);
+            }
+            if(myMsg->protocol == PROTOCOL_TCP){
+              TCPProtocol(myMsg);
             }
 
          }
@@ -787,6 +786,62 @@ void Dijkstra(){
     }
     
     }
+
+// ----------- Project 3 -------------
+  // Iterate through list and find index that has Socket with matching port. Then Check Flag
+
+  // Flag 1: Received SYN from src, Send SYN_ACK, change state to SYN_RCVD
+  // Flag 2: Received SYN_ACK from src, Send ACK, change state to ESTABLISHED
+  // FLAG 3: Received ACK from src, change state to ESTABLISHED
+  // After flag 3 both client and server states are established and ready to transmit data
+  void TCPProtocol(pack *myMsg) {
+    socket_store_t* receivedSocket;
+    socket_store_t tempSocket;
+    int i,j;
+    LinkState dest;
+    uint16_t next;
+
+    // SYN_ACK Packet
+    pack SynAckPack;
+
+    receivedSocket = myMsg->payload;
+
+    //Get our Next Destination
+
+    //Find right socket
+    for(i = 0; i < MAX_NUM_OF_SOCKETS; i++){
+      tempSocket = call Transport.getSocket(i);
+      // Check for Port and Source; Listening; And Check Flag 1 for SYN.
+      // If Found send a SYN_ACK
+      if(receivedSocket->flag == 1) {
+        // Update Socket State
+        tempSocket.flag = 2;
+        tempSocket.dest.port = receivedSocket->src;
+        tempSocket.dest.addr = myMsg->src;
+        tempSocket.state = SYN_RCVD;
+        call Transport.bind(tempSocket.fd, tempSocket);
+
+        //Make our SYN_ACK
+        makePack(&SynAckPack, TOS_NODE_ID, myMsg->src, myMsg->TTL, PROTOCOL_TCP, myMsg->seq, &tempSocket, (uint8_t)sizeof(tempSocket));
+
+        // Get Our Next Destination
+        for(j = 0; j < Confirmed.size();j++){
+          dest = call Confirmed.get(j);
+          if (SynAckPack.dest == dest.node){
+            next = dest.nextHop;
+          }
+        }
+
+        dbg(TRANSPORT_CHANNEL,"SYN packet received from Node %d port %d, replying SYN_ACK.\n", myMsg->src, receivedSocket->src);
+        //if(call tableroute.get(tempSocket.dest.addr))
+          //call Sender.send(SynAckPack, call tableroute.get(tempSocket.dest.addr)); //brimo
+        //else
+          //dbg(TRANSPORT_CHANNEL, "Cant find route to client.\n");
+        call Sender.send(SynAckPack,next);  //aye
+      }//end if
+    }//end for
+  }
+
     }
 
 
