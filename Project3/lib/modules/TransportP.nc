@@ -231,7 +231,26 @@ implementation {
     * @return socket_t - returns SUCCESS if you are able to attempt
     *    a connection with the fd passed, else return FAIL.
     */
+    // Make socket_store_t truct and update with SYN, dest port and dest addr.
+    // Struct is now payload to be added to a packet with src TOS_NODE_ID, dest: addr->addr
+    // Iterate through route table to find next node.
    command error_t Transport.connect(socket_t fd, socket_addr_t * addr) {
+
+    socket_store_t temp;
+    pack SYN;
+
+    // Fill in SYN packet
+    SYN.src = TOS_NODE_ID;
+    SYN.dest = addr->addr;
+    SYN.seq = 1; // correct?
+    SYN.TTL = MAX_TTL;
+    SYN.protocol = PROTOCOL_TCP;
+
+
+    dbg(GENERAL_CHANNEL, "Transport.connect().\n");
+
+    // NEED DESTINATION FROM ROUTE TABLE
+    // EITHER PASS IT IN THROUGH FUNCTION, OR JUST DO THIS CONNECT FUNCTION IN Node.nc(brimo)
 
    }
 
@@ -245,8 +264,25 @@ implementation {
     *    a closure with the fd passed, else return FAIL.
     */
    command error_t Transport.close(socket_t fd) {
+    socket_store_t temp;
+    int i;
 
-   }
+    //Search list for Socket fd
+    for(i = 0; i < call SocketList.size(); i++){
+        temp = call SocketList.get(i);
+
+        if(fd == temp.fd) {
+            temp = call SocketList.remove(i);
+            temp.state = CLOSED;
+            call SocketList.pushback(temp);
+            dbg(TRANSPORT_CHANNEL,"Socket %d is now CLOSED.\n",fd);
+
+            return SUCCESS;
+        }
+    }
+    return FAIL;
+
+   }// End Close
 
    /**
     * A hard close, which is not graceful. This portion is optional.
