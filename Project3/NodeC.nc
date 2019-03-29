@@ -20,6 +20,9 @@ implementation {
 
     components new TimerMilliC() as periodicTimerC;   // create a new timer named myTimerC
     components new ListC(pack,64) as PacketsC;
+    
+    components new TimerMilliC() as acceptTimerC; 
+    components new TimerMilliC() as writtenTimerC; 
 
     Node.Packets -> PacketsC;
     
@@ -76,5 +79,8 @@ implementation {
     // ---- Project 3 -----
     components TransportC;
     Node.Transport -> TransportC;
+    
+    Node.acceptTimer -> acceptTimerC; 
+    Node.writtenTimer ->writtenTimerC; 
 
 }
