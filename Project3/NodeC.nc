@@ -83,4 +83,7 @@ implementation {
     Node.acceptTimer -> acceptTimerC; 
     Node.writtenTimer ->writtenTimerC; 
 
+    components new ListC(socket_store_t, 10) as SocketlistC;
+    Node.Socketlist -> SocketlistC;
+
 }
