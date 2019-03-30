@@ -6,7 +6,14 @@ Implement transportC.nc and transportP.nc under lib/modules
            
 * 3/28/19 - Need to work on the Timer (acceptTimer and writtenTimer(not sure about writtenTimer))
             Need to fix error for the TCPProtocol (bind (fd, &addr))
-
+            
+* 3/29/10 - I think in the ones that Don't use the TCPpack.h the first flag is set in Transport.connect(),(they set the flag to 1)
+            and then the rest of the flags are set in that first (if flag ==1) block.
+            
+            Need to do Transport.connect()
+            Fix 3-way receive
+            
+            
 * Setup and teardown
 *** Start of data transfer, using simplest to implement stop and wait protocol. 
 
