@@ -35,6 +35,7 @@ typedef struct socket_store_t{
     uint8_t flag;
     enum socket_state state;
     socket_port_t src;
+    //socket_addr_t src;
     socket_addr_t dest;
     socket_t fd;
 
@@ -53,5 +54,7 @@ typedef struct socket_store_t{
     uint16_t RTT;
     uint8_t effectiveWindow;
 }socket_store_t;
+
+//typedef struct socket
 
 #endif

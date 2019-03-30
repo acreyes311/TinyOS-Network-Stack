@@ -24,7 +24,7 @@ typedef struct socket_store_t{
     enum socket_state state;
     socket_port_t src;
     socket_addr_t dest;
-    uint16_t fd;
+    socket_t fd;
 
     // This is the sender portion.
     uint8_t sendBuff[SOCKET_BUFFER_SIZE];
@@ -54,14 +54,15 @@ module TransportP{
 
 
 implementation {
+    /*
     // Added Functions
-    socket_t getSocket(uint8_t destPort, uint8_t srcPort);
-    socket_t getServerSocket(uint8_t destPort);
+    socket_store_t getSocket(uint8_t destPort, uint8_t srcPort);
+    socket_store_t getServerSocket(uint8_t destPort);
 
 
     //get function
-    socket_t getSocket(uint8_t destPort, uint8_t srcPort) {
-        socket_t temp;
+    socket_store_t getSocket(uint8_t destPort, uint8_t srcPort) {
+        socket_store_t temp;
         uint16_t i;
         uint16_t size = call SocketList.size();
 
@@ -75,8 +76,8 @@ implementation {
     }// End getSocket
 
     // getServerSocket finds the listening socket then opens new socket to host the connection
-    socket_t getServerSocket(uint8_t destPort){
-        socket_t temp;
+    socket_store_t getServerSocket(uint8_t destPort){
+        socket_store_t temp;
         uint16_t i;
         bool found;
 
@@ -87,7 +88,7 @@ implementation {
             }
         }
     }// End getServerSocket
-
+*/
    /**
     * Get a socket if there is one available.
     * @Side Client/Server

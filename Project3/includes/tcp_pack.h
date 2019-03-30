@@ -1,3 +1,4 @@
+
 #ifndef TCP_PACKET_H
 #define TCP_PACKET_H
 
@@ -19,7 +20,6 @@ typedef nx_struct tcp_pack{
 	nx_uint8_t flag;
 	nx_uint8_t window;
 	nx_uint8_t payload[TCP_MAX_PAYLOAD_SIZE];
-
 }tcp_pack;
 
 #endif

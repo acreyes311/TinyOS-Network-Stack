@@ -15,6 +15,7 @@
 #include "includes/sendInfo.h"
 #include "includes/channels.h"
 #include "includes/socket.h"
+//#include "includes/tcp_pack.h"
 
 #define INFINITY 9999
 #define MAX 10
@@ -202,6 +203,7 @@ implementation{
     //    read data and print
     
     event void acceptTimer.fired() {
+      /*
           int i,size,length;
           socket_t newfd;
           fd = call Transport.accept(fd);
@@ -228,6 +230,7 @@ implementation{
           else{
             dbg(GENERAL_CHANNEL, "new Fd is NULL");
           }
+          */
     }
     
     //based on Psuedocode
@@ -283,6 +286,11 @@ implementation{
          }
          if(isKnown(myMsg)) {
    //         dbg(FLOODING_CHANNEL,"Already seen PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
+         }
+         if (myMsg->dest == TOS_NODE_ID){
+            if(myMsg->protocol == PROTOCOL_TCP){
+              TCPProtocol(myMsg);
+            }
          }
 
          // Neighbor Discovery or LSP entry
@@ -558,7 +566,7 @@ implementation{
       
       //sendPackage.seq = sendPackage.seq + 1;
       //makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, sendPackage.seq, payload, PACKET_MAX_PAYLOAD_SIZE);
-      makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, seqNumber+1, payload, PACKET_MAX_PAYLOAD_SIZE);
+      makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, seqNumber++, payload, PACKET_MAX_PAYLOAD_SIZE);
       // Changed from BROADCAST
       insertPack(sendPackage);
       call Sender.send(sendPackage, dest);
@@ -850,16 +858,20 @@ void Dijkstra(){
   void TCPProtocol(pack *myMsg) {
     socket_store_t* receivedSocket;
     socket_store_t tempSocket;
-    int i,j;
+    socket_store_t stateSocket;
+    socket_addr_t tempAddr;
+    //tcp_pack* msg = (tcp_pack*) myMsg->payload;
+    int i,j,k;
     uint8_t srcPort, destPort;
     LinkState dest;
+    LinkState ls;
     uint16_t next;
 
     // SYN_ACK Packet
     pack SynAckPack;
 
     receivedSocket = myMsg->payload;
-
+    tempAddr = receivedSocket->dest;
     //Get our Next Destination
     // ------------------ CHANGE TO SWITCH TO HANDLE 3-WAY HANDSHAKE ---------------
     //Find right socket
@@ -873,18 +885,43 @@ void Dijkstra(){
         tempSocket.dest.port = receivedSocket->src;
         tempSocket.dest.addr = myMsg->src;
         tempSocket.state = SYN_RCVD;
-        call Transport.bind(tempSocket.fd, tempSocket); // Change to setSocket/Update
+        //call Transport.bind(tempSocket.fd, tempSocket); // Change to setSocket/Update
 
         //Make our SYN_ACK
-        makePack(&SynAckPack, TOS_NODE_ID, myMsg->src, myMsg->TTL, PROTOCOL_TCP, myMsg->seq, &tempSocket, (uint8_t)sizeof(tempSocket));
+        //makePack(&SynAckPack, TOS_NODE_ID, myMsg->src, myMsg->TTL, PROTOCOL_TCP, myMsg->seq, &tempSocket, (uint8_t)sizeof(tempSocket));
+        SynAckPack.dest = myMsg->src;
+        SynAckPack.src = TOS_NODE_ID;
+        SynAckPack.seq = myMsg->seq + 1;
+        SynAckPack.TTL = myMsg->TTL;
+        SynAckPack.protocol = PROTOCOL_TCP;
+
+        //memcpy(dest, src, count)
+        memcpy(SynAckPack.payload, &tempSocket, (uint8_t)sizeof(tempSocket));
 
         // Get Our Next Destination
-        for(j = 0; j < Confirmed.size();j++){
+        for(j = 0; j < call Confirmed.size();j++){
           dest = call Confirmed.get(j);
           if (SynAckPack.dest == dest.node){
             next = dest.nextHop;
           }
         }
+
+        /*
+        while (!Socketlist.isEmpty()){
+          stateSocket = call Socketlist.front();
+          if(stateSocket.fd == i) {
+            stateSocket.state = SYN_RCVD;
+            call localSocketList.pushfront(stateSocket);
+          }
+          else{
+            call localSocketList.pushfront(stateSocket);
+          }
+        }
+          while(!call localSocketList.isEmpty()){
+            call Socketlist.pushfront(call localSocketList.front());
+            call localSocketList.popfront();
+          }
+        */
 
         dbg(TRANSPORT_CHANNEL,"SYN packet received from Node %d port %d, replying SYN_ACK.\n", myMsg->src, receivedSocket->src);
         //if(call tableroute.get(tempSocket.dest.addr))
@@ -896,7 +933,7 @@ void Dijkstra(){
       }//end if
 
       // Flag2: SYN_ACK packet
-      else if(receivedSocket->flag == 2){
+      if(receivedSocket->flag == 2){
         // Pack to reply to the SYN_ACK; Connection has been ESTABLISHED
         pack AckPack;
 
@@ -907,7 +944,7 @@ void Dijkstra(){
         tempSocket.dest.port = receivedSocket->src;
         tempSocket.dest.addr = myMsg->src;
         tempSocket.state = ESTABLISHED;
-        call Transport.bind(tempSocket.fd, tempSocket); // Change to setSocket/Update
+        //call Transport.bind(tempSocket.fd, tempSocket); // Change to setSocket/Update
 
         //Make ACK packet
         makePack(&AckPack, TOS_NODE_ID, myMsg->src, myMsg->TTL, PROTOCOL_TCP, myMsg->seq, &tempSocket, (uint8_t)sizeof(tempSocket));
@@ -925,10 +962,11 @@ void Dijkstra(){
 
         tempSocket.state = ESTABLISHED;
 
-        call Transport.bind(tempSocket.fd, tempSocket); // Change to setSocket/Update
+        //call Transport.bind(tempSocket.fd, tempSocket); // Change to setSocket/Update
       }
     }//end for
   }
+
 
     }
 
