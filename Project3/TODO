@@ -8,7 +8,7 @@ Implement transportC.nc and transportP.nc under lib/modules
             Need to fix error for the TCPProtocol (bind (fd, &addr))
             
 * 3/29/10 - I think in the ones that Don't use the TCPpack.h the first flag is set in Transport.connect(),(they set the flag to 1)
-            and then the rest of the flags are set in that first (if flag ==1) block.
+            and then the rest of the flags are set in that first (if flag ==1) block(in receive).
             
             Need to do Transport.connect()
             Fix 3-way receive
