@@ -24,6 +24,7 @@ typedef struct socket_store_t{
     enum socket_state state;
     socket_port_t src;
     socket_addr_t dest;
+    uint16_t fd;
 
     // This is the sender portion.
     uint8_t sendBuff[SOCKET_BUFFER_SIZE];
@@ -53,6 +54,40 @@ module TransportP{
 
 
 implementation {
+    // Added Functions
+    socket_t getSocket(uint8_t destPort, uint8_t srcPort);
+    socket_t getServerSocket(uint8_t destPort);
+
+
+    //get function
+    socket_t getSocket(uint8_t destPort, uint8_t srcPort) {
+        socket_t temp;
+        uint16_t i;
+        uint16_t size = call SocketList.size();
+
+        for(i = 0; i < call SocketList.size();i++) {
+            temp = call SocketList.get(i);
+            if(temp.dest.port == srcPort && temp.src.port == destPort){
+                return temp;
+            }
+        }
+
+    }// End getSocket
+
+    // getServerSocket finds the listening socket then opens new socket to host the connection
+    socket_t getServerSocket(uint8_t destPort){
+        socket_t temp;
+        uint16_t i;
+        bool found;
+
+        for (i = 0; i < call SocketList.size();i++){
+            temp = call SocketList.get(i);
+            if(temp.src.port == destPort && temp.state == LISTEN){
+                return temp;
+            }
+        }
+    }// End getServerSocket
+
    /**
     * Get a socket if there is one available.
     * @Side Client/Server
@@ -307,6 +342,23 @@ implementation {
     *   to listen else FAIL.
     */
    command error_t Transport.listen(socket_t fd) {
-    
-   }
-}
+    socket_store_t temp;
+    int i;
+
+    for(i = 0; i < call SocketList.size(); i++) {
+        temp = call SocketList.get(i);
+
+        if(temp.fd == fd) {
+            temp = call SocketList.remove(i);
+            temp.state == LISTEN;
+            call SocketList.pushback(temp);
+
+            dbg(TRANSPORT_CHANNEL, "Socket %d has been set to listen.\n", fd);
+
+            return SUCCESS;
+        }
+    }
+    return FAIL;
+   }// End listen
+
+}// end implement

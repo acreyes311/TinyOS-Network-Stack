@@ -78,6 +78,9 @@ module Node{
    uses interface Timer<TMilli> as lspTimer; // fires and call function to create LSP packet
    uses interface Hashmap<int> as tableroute; // for out Dijkstras algorithm
 
+   // ----- Project 3 ------
+   uses interface List<socket_store_t> as Socketlist;
+
 }
 
 
@@ -848,6 +851,7 @@ void Dijkstra(){
     socket_store_t* receivedSocket;
     socket_store_t tempSocket;
     int i,j;
+    uint8_t srcPort, destPort;
     LinkState dest;
     uint16_t next;
 

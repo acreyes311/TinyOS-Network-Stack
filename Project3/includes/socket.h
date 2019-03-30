@@ -9,11 +9,11 @@ enum{
 };
 
 enum socket_state{
-    CLOSED,
-    LISTEN,
-    ESTABLISHED,
-    SYN_SENT,
-    SYN_RCVD,
+    CLOSED,         // flag 0
+    LISTEN,         // flag 1
+    ESTABLISHED,    // flag 4
+    SYN_SENT,       // flag 2
+    SYN_RCVD,       // flag 3
 };
 
 
