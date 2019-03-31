@@ -50,6 +50,7 @@ module TransportP{
     uses interface SimpleSend as Sender;    
     uses interface List<socket_store_t> as SocketList;
     uses interface List<LinkState> as ConfirmedList;
+    uses interface List<socket_store_t> as socketTemp;
 
 }
 
@@ -273,17 +274,36 @@ implementation {
     // Iterate through route table to find next node.
    command error_t Transport.connect(socket_t fd, socket_addr_t * addr) {
 
-    socket_store_t temp;
+    socket_store_t temp,temp2;
     pack SYN;
     LinkState lsdest;
     uint16_t nh,i;
     // Fill in SYN packet
     SYN.src = TOS_NODE_ID;
     SYN.dest = addr->addr;
-    SYN.seq = 1; // correct?
+    SYN.seq = 1; 
     SYN.TTL = MAX_TTL;
     SYN.protocol = PROTOCOL_TCP;
+    temp.dest.port = addr->port;
+    temp.dest.addr = addr->addr;
+    temp.flag = 1;
 
+    while(!call SocketList.isEmpty()){
+        temp2 = call SocketList.front();
+        if(temp.fd == temp2.fd){
+            call socketTemp.pushfront(temp);
+        }
+        else{
+            call socketTemp.pushfront(temp2);
+        }
+        call SocketList.popfront();
+    }
+    while(!call socketTemp.isEmpty()){
+        call SocketList.pushfront(call socketTemp.front());
+        call socketTemp.popfront();
+    }
+
+    memcpy(SYN.payload, &temp, (uint8_t)sizeof(temp));
 
     dbg(GENERAL_CHANNEL, "Transport.connect().\n");
 
@@ -294,6 +314,7 @@ implementation {
         if(SYN.dest == lsdest.node)
             nh = lsdest.nextHop;
     }
+    dbg(TRANSPORT_CHANNEL, "SYN packet being sent to nextHop %d, intended for Node %d.\n",nh,addr->addr);
     call Sender.send(SYN,nh);
 
    }

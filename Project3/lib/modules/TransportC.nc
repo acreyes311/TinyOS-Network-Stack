@@ -18,4 +18,7 @@ implementation {
 
 	TransportP.ConfirmedList = ConfirmedC;
 
+	components new ListC(socket_store_t,10) as socketTempC;
+	TransportP.socketTemp -> socketTempC;
+
 }
