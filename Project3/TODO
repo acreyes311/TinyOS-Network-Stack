@@ -16,6 +16,7 @@ Implement transportC.nc and transportP.nc under lib/modules
 * 3/30/19 - Aaaaaah. I dont know how to fix that problem.  Hard to test any of the new stuff without that working.
             
             Still Need to TCPProtocol flag = 4 and the rest of it?
+            Check that whatever we have in TransportP is correct.
             
             
 * Setup and teardown
