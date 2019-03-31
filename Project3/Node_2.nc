@@ -285,7 +285,7 @@ implementation{
 
          //if(myMsg->TTL == 0 ) {
          // Drop packet if expired or seen 
-         //}
+        // }
          
          //if(isKnown(myMsg)) {
    //         dbg(FLOODING_CHANNEL,"Already seen PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
@@ -341,8 +341,7 @@ implementation{
                 */
                         
         else if(myMsg->protocol == PROTOCOL_LINKSTATE){         
-                 // dbg(ROUTING_CHANNEL, "Node: %d successfully received an LSP Packet from Node %d! Cost: %d \n", TOS_NODE_ID, myMsg->src, MAX_TTL - myMsg->TTL);
-                  //dbg(ROUTING_CHANNEL, "Payload Array length is: %d \n", call RouteTable.size());
+
                   flag = FALSE;
                   
                   //Check for LSP and current node match
@@ -461,7 +460,7 @@ implementation{
           // Reached Destination
        else if(myMsg->dest == TOS_NODE_ID && myMsg->protocol == PROTOCOL_PING) //|| myMsg->protocol == PROTOCOL_PINGREPLY)) 
          {
-            dbg(FLOODING_CHANNEL,"Packet #%d arrived from %d with payload: %s\n", myMsg->seq, myMsg->src, myMsg->payload);
+            dbg(FLOODING_CHANNEL,"Packet arrived from %d with payload: %s\n",myMsg->src, myMsg->payload);
 
             // Protocol Ping forwards to nextHop from our Confirmed List
 
@@ -628,7 +627,7 @@ implementation{
     socket_addr_t address;
     //socket_t fd;  // global fd up top
 
-    dbg(GENERAL_CHANNEL, "inside setTestServer -- Initializing Server\n");
+    dbg(GENERAL_CHANNEL, "Inside setTestServer -- Initializing Server\n");
 
     address.addr = TOS_NODE_ID;
     address.port = port;
@@ -649,23 +648,29 @@ implementation{
    */
    event void CommandHandler.setTestClient(uint16_t dest, uint16_t srcPort, uint16_t destPort, uint16_t transfer){
     socket_addr_t address;  // socket address
-    socket_addr_t serverAdr;  // server address
+    socket_addr_t socketAdr,serverAdr;  // server address
 
     dbg(TRANSPORT_CHANNEL, "Inside setTestClient -- Testing Client.\n");
 
     fd = call Transport.socket();
 
     // Source and source port
-    address.addr = TOS_NODE_ID;
-    address.port = srcPort;
-    // Destination and dest port
-    serverAdr.addr = dest;
-    serverAdr.port = destPort;
+    socketAdr.addr = TOS_NODE_ID;
+    socketAdr.port = srcPort;
 
-    if(call Transport.bind(fd, &address) == SUCCESS) {
+
+    if(call Transport.bind(fd, &socketAdr) == SUCCESS) {
       dbg(TRANSPORT_CHANNEL, "Client successfully binded.\n");
+      // Destination and dest port
+      serverAdr.addr = dest;
+      serverAdr.port = destPort;
     }
-    call Transport.connect(fd, &serverAdr);
+    //call Transport.connect(fd, &serverAdr);
+    
+    if(call Transport.connect(fd,&serverAdr) == SUCCESS){
+      //call WriteTimer();
+      dbg(TRANSPORT_CHANNEL,"Transport.connect SUCCESS\n");
+    }
     
     dbg(TRANSPORT_CHANNEL, "Node %d is client with source port %d, and dest %d at their port %d.\n",
       TOS_NODE_ID, srcPort, dest, destPort);
@@ -974,7 +979,7 @@ void Dijkstra(){
     }
     if(call Confirmed.isEmpty())
     {
-      for(i = 1; i < 10; i++)
+      for(i = 1; i <= 10; i++)
       {
         temp2.node = i;
         temp2.cost = cost[TOS_NODE_ID][i];
