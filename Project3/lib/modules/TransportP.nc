@@ -49,6 +49,7 @@ module TransportP{
 
     uses interface SimpleSend as Sender;    
     uses interface List<socket_store_t> as SocketList;
+    uses interface List<LinkState> as ConfirmedList;
 
 }
 
@@ -274,7 +275,8 @@ implementation {
 
     socket_store_t temp;
     pack SYN;
-
+    LinkState lsdest;
+    uint16_t nh,i;
     // Fill in SYN packet
     SYN.src = TOS_NODE_ID;
     SYN.dest = addr->addr;
@@ -287,6 +289,12 @@ implementation {
 
     // NEED DESTINATION FROM ROUTE TABLE
     // EITHER PASS IT IN THROUGH FUNCTION, OR JUST DO THIS CONNECT FUNCTION IN Node.nc(brimo)
+    for(i = 0; i < call ConfirmedList.size(); i++) {
+        lsdest = call ConfirmedList.get(i);
+        if(SYN.dest == lsdest.node)
+            nh = lsdest.nextHop;
+    }
+    call Sender.send(SYN,nh);
 
    }
 

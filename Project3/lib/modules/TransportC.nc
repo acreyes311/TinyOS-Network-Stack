@@ -2,6 +2,7 @@
 
 configuration TransportC {
 	provides interface Transport;
+	uses interface List<LinkState> as ConfirmedC;
 }
 
 implementation {
@@ -14,5 +15,7 @@ implementation {
 	// Our list of sockets
 	components new ListC(socket_store_t, 10) as SocketListC;
 	TransportP.SocketList -> SocketListC;
+
+	TransportP.ConfirmedList = ConfirmedC;
 
 }
