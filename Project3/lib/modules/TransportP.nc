@@ -279,6 +279,7 @@ implementation {
     LinkState lsdest;
     uint16_t nh,i;
     bool flag;
+
     // Fill in SYN packet
     SYN.src = TOS_NODE_ID;
     SYN.dest = addr->addr;
@@ -286,11 +287,13 @@ implementation {
     SYN.TTL = MAX_TTL;
     SYN.protocol = PROTOCOL_TCP;
 
-    temp = call SocketList.get(fd);
+    //temp = call SocketList.get(fd);
     temp.dest.port = addr->port;
     temp.dest.addr = addr->addr;
     temp.flag = 1;
 
+
+    // update info in list
     while(!call SocketList.isEmpty()){
         temp2 = call SocketList.front();
         if(temp.fd == temp2.fd){
@@ -305,13 +308,12 @@ implementation {
         call SocketList.pushfront(call socketTemp.front());
         call socketTemp.popfront();
     }
-
+    //memcpy(dest,src,size)
     memcpy(SYN.payload, &temp, (uint8_t)sizeof(temp));
 
     dbg(GENERAL_CHANNEL, "Transport.connect().\n");
 
-    // NEED DESTINATION FROM ROUTE TABLE
-
+    // Find the next hop for destination node
     for(i = 0; i < call ConfirmedList.size(); i++) {
         lsdest = call ConfirmedList.get(i);
         if(SYN.dest == lsdest.node)

@@ -157,13 +157,13 @@ implementation{
         pings = temp.life;
         //call Neighbors.remove(i);
         //call Neighbors.pushback(line);
-      }
+      
       //for (i = 0; i < size; i++) {
        // temp = call Neighbors.get(i);
         //life = temp.life;
 
-        // Drop expired neighbors after 3 pings and put in DroppedList
-        if (pings > 5) {
+        // Drop expired neighbors after 7 pings and put in DroppedList
+        if (pings > 7) {
           lspCount = 0;
           line = call Neighbors.remove(i);
           call Neighbors.popback();
@@ -172,9 +172,8 @@ implementation{
           i--;
           size--;
         }
-      //}
+      }
     }
- //   signal CommandHandler.printNeighbors();
     // After Dropping expired neighbors now Ping list of neighbors
     msg = "Message\n";
     // Send discovered packets, destination AM_BROADCAST
@@ -290,15 +289,9 @@ implementation{
          //if(isKnown(myMsg)) {
    //         dbg(FLOODING_CHANNEL,"Already seen PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
         //}
-        if(myMsg->TTL == 0 || isKnown(myMsg)){}
-        /*
-         if (myMsg->dest == TOS_NODE_ID){
-            if(myMsg->protocol == PROTOCOL_TCP){
-              TCPProtocol(myMsg);
-            }
-         }
-         */
-         //TCPProtocol(myMsg);
+        if(myMsg->TTL == 0 || isKnown(myMsg)){
+          //return msg;
+        }
          // Neighbor Discovery or LSP entry
       else if(AM_BROADCAST_ADDR == myMsg->dest) {            
 
@@ -456,15 +449,15 @@ implementation{
             }                         
           }         
 
-          // ---------NOT ENTERING HERE ------------
           // Reached Destination
        else if(myMsg->dest == TOS_NODE_ID && myMsg->protocol == PROTOCOL_PING) //|| myMsg->protocol == PROTOCOL_PINGREPLY)) 
          {
+          //if(myMsg->protocol == PROTOCOL_PING){
             dbg(FLOODING_CHANNEL,"Packet arrived from %d with payload: %s\n",myMsg->src, myMsg->payload);
 
             // Protocol Ping forwards to nextHop from our Confirmed List
-
-              nextHop = 0;
+              //Dijkstra();
+              //nextHop = 0;
                dbg(FLOODING_CHANNEL,"Ping replying to %d\n", myMsg->src);
                //makepack with myMsg->src as destination              
                makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, seqNumber, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
@@ -492,17 +485,18 @@ implementation{
                }
                */
                // Send new packet
-               //call Sender.send(sendPackage, nextHop); // Send to nextHop
-               call Sender.send(sendPackage, AM_BROADCAST_ADDR);               
+               dbg(ROUTING_CHANNEL,"pack for %d, sending to %d\n",myMsg->src, nextHop);
+               call Sender.send(sendPackage, nextHop); // Send to nextHop
+               //call Sender.send(sendPackage, AM_BROADCAST_ADDR);               
           }// End else if prot == PROT_PING
 
             // PROTOCOL PINGREPLY: Packet at correct destination; Stop sending packet
-      else if(myMsg->dest == TOS_NODE_ID && myMsg->protocol == PROTOCOL_PINGREPLY) {
+        else if(myMsg->protocol == PROTOCOL_PINGREPLY && myMsg->dest == TOS_NODE_ID) {
                dbg(FLOODING_CHANNEL, "PING REPLY RECEIVED FROM %d !!\n ",myMsg->src);
-      }
-      else if(myMsg->dest == TOS_NODE_ID && myMsg->protocol == PROTOCOL_TCP){
+        }
+        else if(myMsg->protocol == PROTOCOL_TCP && myMsg->dest == TOS_NODE_ID){
               TCPProtocol(myMsg);
-      }
+        } 
 
          // Packet does not belong to current node 
          // Flood Packet with TTL - 1
@@ -525,10 +519,12 @@ implementation{
             }
             call Sender.send(sendPackage,snd);
             //call Sender.send(sendPackage, AM_BROADCAST_ADDR);  // Resend packet
-          } 
+          }
+         
          //dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
         return msg;
       }
+
       else{
       
       dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
@@ -904,15 +900,16 @@ void Dijkstra(){
         }
       }
     }
-    if(TOS_NODE_ID == 1){
-    for(i = 0; i < mn; i++)
-    {
-      for(j = 0; j < mn; j++)
-      {
+    // Does nothing ?
+    //if(TOS_NODE_ID == 1){
+    //for(i = 0; i < mn; i++)
+    //{
+     // for(j = 0; j < mn; j++)
+     // {
         //printf("i=%d, j=%d, cost=%d\n", i, j, cost[i][j]);
-      }
-    }
-    }
+      //}
+    //}
+    //}
 
     for(i = 0; i < mn; i++)
     {

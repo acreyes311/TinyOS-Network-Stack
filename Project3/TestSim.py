@@ -131,6 +131,12 @@ class TestSim:
         print 'Adding Channel', channelName;
         self.t.addChannel(channelName, out);
 
+    # def testClient(self, source, payload):
+    #     self.sendCMD(self.CMD_TEST_CLIENT, source, payload);
+
+    # def testServer(self, source, port):
+    #     self.sendCMD(self.CMD_TEST_SERVER, source, port);
+
     def TestServer(self, address, port):
         self.sendCMD(self.CMD_TEST_SERVER, address, chr(port));
 
@@ -154,18 +160,24 @@ def main():
     s.addChannel(s.TRANSPORT_CHANNEL); # project 3
 
     s.runTime(500);
-    s.ping(5,7, "Hello, World, 5-7");
-    s.runTime(100);
+    s.ping(5,7,"Hello, World, 5-7");
+    s.runTime(200);
     #s.ping(3, 9, "Hi!!! 3-9");
     #s.runTime(100);
+
+    # s.neighborDMP(9);
+    # s.runTime(100);
+
+    # s.routeDMP(9);
+    # s.runTime(100);
 
     s.TestServer(2,80);
     s.runTime(100);
     s.TestClient(3,64,60,2,8);
     s.runTime(100);
 
-    #s.ping(3, 9, "Hi!!! 3-9");
-    #s.runTime(40);
+    # s.ping(4, 6, "Hi!!! 4-6");
+    # s.runTime(100);
 
 
     #s.moteOff(7); #turns off node 7
