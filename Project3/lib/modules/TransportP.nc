@@ -101,35 +101,35 @@ implementation {
     */
    command socket_t Transport.socket(){
     socket_t fd;    // fd ID
-    socket_store_t tempSocket;  // socket
+    socket_store_t newSocket;  // socket
 
     if(call SocketList.size() < MAX_NUM_OF_SOCKETS) { // < 10
         // Gets the FD id of last index in list
-        tempSocket.fd = call SocketList.size();
+        newSocket.fd = call SocketList.size();
         fd = call SocketList.size();
 
         //Initialize socket with default values
-        tempSocket.state = CLOSED;
-        tempSocket.lastWritten = 0;
-        tempSocket.lastAck = 0;
-        tempSocket.lastSent = 0;
-        tempSocket.lastRead = 0;
-        tempSocket.lastRcvd = 0;
-        tempSocket.nextExpected = 0;
-        tempSocket.RTT = 0;
-        tempSocket.effectiveWindow = SOCKET_BUFFER_SIZE; // 128
+        newSocket.state = CLOSED;
+        newSocket.lastWritten = 0;
+        newSocket.lastAck = 0;
+        newSocket.lastSent = 0;
+        newSocket.lastRead = 0;
+        newSocket.lastRcvd = 0;
+        newSocket.nextExpected = 0;
+        newSocket.RTT = 0;
+        //newSocket.effectiveWindow = SOCKET_BUFFER_SIZE; // 128
 
         //Push into socket list
-        call SocketList.pushback(tempSocket);
+        call SocketList.pushback(newSocket);
 
-        dbg(TRANSPORT_CHANNEL, "Got Socket.\n");
+        dbg(TRANSPORT_CHANNEL, "Socket %d Allocated.\n",newSocket.fd);
 
-        return tempSocket.fd;   // Returns the fd id
+        return newSocket.fd;   // Returns the fd id
     }
 
     else {
         dbg(TRANSPORT_CHANNEL, "No socket allocated. Returning NULL.\n");
-        return (socket_t)NULL;
+        return NULL;
     }
    }// END socket()
 
@@ -203,7 +203,7 @@ implementation {
     }
     //Otherwise return NULL
     dbg(TRANSPORT_CHANNEL, "Socket %d accept failed. Returning NULL.\n", fd);
-    return (socket_t)NULL;
+    return NULL;
    } // End accept
 
 
@@ -278,12 +278,15 @@ implementation {
     pack SYN;
     LinkState lsdest;
     uint16_t nh,i;
+    bool flag;
     // Fill in SYN packet
     SYN.src = TOS_NODE_ID;
     SYN.dest = addr->addr;
     SYN.seq = 1; 
     SYN.TTL = MAX_TTL;
     SYN.protocol = PROTOCOL_TCP;
+
+    temp = call SocketList.get(fd);
     temp.dest.port = addr->port;
     temp.dest.addr = addr->addr;
     temp.flag = 1;
@@ -308,14 +311,19 @@ implementation {
     dbg(GENERAL_CHANNEL, "Transport.connect().\n");
 
     // NEED DESTINATION FROM ROUTE TABLE
-    // EITHER PASS IT IN THROUGH FUNCTION, OR JUST DO THIS CONNECT FUNCTION IN Node.nc(brimo)
+
     for(i = 0; i < call ConfirmedList.size(); i++) {
         lsdest = call ConfirmedList.get(i);
         if(SYN.dest == lsdest.node)
             nh = lsdest.nextHop;
+            flag = TRUE;
     }
     dbg(TRANSPORT_CHANNEL, "SYN packet being sent to nextHop %d, intended for Node %d.\n",nh,addr->addr);
     call Sender.send(SYN,nh);
+    if(flag == TRUE)
+        return SUCCESS;
+    else
+        return FAIL;
 
    }
 
