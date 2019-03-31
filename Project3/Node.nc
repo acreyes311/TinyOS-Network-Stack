@@ -140,8 +140,8 @@ implementation{
     char *msg;
     uint16_t size;
     uint16_t i = 0;
-    
-    Neighbor line;
+    uint16_t pings = 0;
+    Neighbor line;//neighbornode
     Neighbor temp;
     size = call Neighbors.size();
     lspCount++;
@@ -152,25 +152,27 @@ implementation{
       // Loop through Neighbors List and increase life/pings/age if not seen
       //  will be dropped every 5 pings a neighbor is not seen.
       for (i = 0; i < size; i++) {
-        line = call Neighbors.get(i);
-        line.life++;
-        call Neighbors.remove(i);
-        call Neighbors.pushback(line);
-      }
-      for (i = 0; i < size; i++) {
         temp = call Neighbors.get(i);
+        temp.life = temp.life + 1;
+        pings = temp.life;
+        //call Neighbors.remove(i);
+        //call Neighbors.pushback(line);
+      }
+      //for (i = 0; i < size; i++) {
+       // temp = call Neighbors.get(i);
         //life = temp.life;
 
         // Drop expired neighbors after 3 pings and put in DroppedList
-        if (temp.life > 5) {
+        if (pings > 5) {
+          lspCount = 0;
           line = call Neighbors.remove(i);
-          call Neighbors.remove(i);
+          call Neighbors.popback();
           //dbg(NEIGHBOR_CHANNEL,"Neighbor %d has EXPIRED and DROPPED from Node %d\n",line.nodeID,TOS_NODE_ID);
           call DroppedNeighbors.pushfront(line);
           i--;
           size--;
         }
-      }
+      //}
     }
  //   signal CommandHandler.printNeighbors();
     // After Dropping expired neighbors now Ping list of neighbors
@@ -191,8 +193,8 @@ implementation{
        if(lspCount < 17 && lspCount %3 == 2 && lspCount > 1){
           makeLSP();
        }
-       //if(lspCount == 17)
-       if(lspCount > 1 && lspCount % 20 == 0 && lspCount < 61)
+       if(lspCount == 17)
+       //if(lspCount > 1 && lspCount % 20 == 0 && lspCount < 61)
           Dijkstra();                          
    }
 //based on Psuedocode
