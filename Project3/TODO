@@ -13,6 +13,10 @@ Implement transportC.nc and transportP.nc under lib/modules
             Need to do Transport.connect()
             Fix 3-way receive
             
+* 3/30/19 - Aaaaaah. I dont know how to fix that problem.  Hard to test any of the new stuff without that working.
+            
+            Still Need to TCPProtocol flag = 4 and the rest of it?
+            
             
 * Setup and teardown
 *** Start of data transfer, using simplest to implement stop and wait protocol. 
