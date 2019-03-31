@@ -10,6 +10,7 @@
 #include <Timer.h>
 #include "includes/CommandMsg.h"
 #include "includes/packet.h"
+#include "includes/socket.h"
 
 configuration NodeC{
 }
@@ -85,5 +86,11 @@ implementation {
 
     components new ListC(socket_store_t, 10) as SocketlistC;
     Node.Socketlist -> SocketlistC;
+
+    // Connect to Transport
+    //components TransportC
+    Node.Transport->TransportC;
+    TransportC.ConfirmedC->ConfirmedC;
+
 
 }
