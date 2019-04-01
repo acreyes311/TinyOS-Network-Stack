@@ -91,6 +91,7 @@ implementation{
    Neighbor NewNeighbor;
    Neighbor TempNeighbor;
    socket_t fd; // Global fd/socket
+   uint32_t TimeReceived, TimeSent;
 
    // Prototypes
    bool isKnown(pack *p);  // already seen function
@@ -157,13 +158,13 @@ implementation{
         pings = temp.life;
         //call Neighbors.remove(i);
         //call Neighbors.pushback(line);
-      }
+      
       //for (i = 0; i < size; i++) {
        // temp = call Neighbors.get(i);
         //life = temp.life;
 
-        // Drop expired neighbors after 3 pings and put in DroppedList
-        if (pings > 5) {
+        // Drop expired neighbors after 7 pings and put in DroppedList
+        if (pings > 7) {
           lspCount = 0;
           line = call Neighbors.remove(i);
           call Neighbors.popback();
@@ -172,9 +173,8 @@ implementation{
           i--;
           size--;
         }
-      //}
+      }
     }
- //   signal CommandHandler.printNeighbors();
     // After Dropping expired neighbors now Ping list of neighbors
     msg = "Message\n";
     // Send discovered packets, destination AM_BROADCAST
@@ -271,6 +271,7 @@ implementation{
       LinkState LSP;
       LinkState temp;
       LinkState dest;
+      LinkState replyDest;
       Neighbor lspNeighbor;
       uint16_t lsSize = 0;  // link state-> arrLength
       bool match;
@@ -282,37 +283,29 @@ implementation{
 
          pack* myMsg=(pack*) payload;  // Message of received package
 
-         if(myMsg->TTL == 0 || isKnown(myMsg)) {
+         //if(myMsg->TTL == 0 ) {
          // Drop packet if expired or seen 
-         }
+        // }
+         
          //if(isKnown(myMsg)) {
    //         dbg(FLOODING_CHANNEL,"Already seen PACKET #%d from %d to %d being dropped\n", myMsg->seq, myMsg->src, myMsg->dest);
-        // }
-         //if (myMsg->dest == TOS_NODE_ID){
-            if(myMsg->protocol == PROTOCOL_TCP){
-              TCPProtocol(myMsg);
-           }
-         //}
-
+        //}
+        if(myMsg->TTL == 0 || isKnown(myMsg)){
+          //return msg;
+        }
          // Neighbor Discovery or LSP entry
-      if(AM_BROADCAST_ADDR == myMsg->dest) {            
-   //       dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d\n", myMsg->src);
+      else if(AM_BROADCAST_ADDR == myMsg->dest) {            
+
             // What protocol does the message contain
-           switch(myMsg->protocol) {
-
-                //PROTOCOL_PING SWITCH CASE //
                 // repackage with TTL-1 and PING_REPLY PROTOCOL
-               case PROTOCOL_PING:
 
+        if(myMsg->protocol == PROTOCOL_PING) {
                   makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
                   insertPack(sendPackage); // Insert pack into our list
                   call Sender.send(sendPackage, myMsg->src);  // Send with pingreply protocol
-                  break;
-               
-              // PROTOCOL_PINGREPLY SWITCH CASE //
-               
-                case PROTOCOL_PINGREPLY:                  
-                 
+                  //break;
+        }// End Prot Ping       
+        else if (myMsg->protocol == PROTOCOL_PINGREPLY){
                   size = call Neighbors.size(); // get size from our List of Neighbors
                   flag = FALSE;  //  Set to true only when neighbor is found
 
@@ -326,32 +319,11 @@ implementation{
                         flag = TRUE;
                         //break;
                      }
-                     //dbg(NEIGHBOR_CHANNEL, "Received a Ping Reply from %d\n", myMsg->src);
-                  }
-                  //break;                
+                  }   
+                    
+        }// End Prot Ping Reply                
                
-                  // If neighbor is not found in our list then it is New and need to add it to the list
-                  if(!flag) { // No Match                   
-         //            dbg(NEIGHBOR_CHANNEL, "New Neighbor %d found and adding to our list\n", myMsg->src);
-                     
-                     if(call DroppedNeighbors.isEmpty()){
-                     
-                     NewNeighbor = call DroppedNeighbors.popfront();  //Get new neighbor                   
-                     NewNeighbor.nodeID =  myMsg->src;  // add src id                    
-                     NewNeighbor.life = 0;  // reset life
-                     call Neighbors.pushback(NewNeighbor);  // push into list
-                     //makeLSP();
-           //          dbg(GENERAL_CHANNEL, "pushback New Neighbor!\n");
-                 }
-                 else{
-                  NewNeighbor = call DroppedNeighbors.popfront();
-                  NewNeighbor.nodeID = myMsg->src;
-                  NewNeighbor.life = 0;
-                  call Neighbors.pushback(NewNeighbor);
-                 }
-                }
-
-                break;
+    
             // ---------------- PROJECT 2 -------------------//
                 // Go here After flooding LSP/ calculate route
                 /*  Linkstate Protocol
@@ -361,24 +333,30 @@ implementation{
                   If received LSP is newest, send that copy to all its neighbors and they do same
                   ->most recent LSP eventually reaches all nodes
                 */
-                case PROTOCOL_LINKSTATE:                          
-                 
-                 // dbg(ROUTING_CHANNEL, "Node: %d successfully received an LSP Packet from Node %d! Cost: %d \n", TOS_NODE_ID, myMsg->src, MAX_TTL - myMsg->TTL);
-                  //dbg(ROUTING_CHANNEL, "Payload Array length is: %d \n", call RouteTable.size());
-                  match = FALSE;
+                        
+        else if(myMsg->protocol == PROTOCOL_LINKSTATE){         
 
+                  flag = FALSE;
+                  
+                  //Check for LSP and current node match
+                  // If node already has copy of LSP
+                  //if(myMsg->src == TOS_NODE_ID){
+                    //dbg(ROUTING_CHANNEL, "Match found. Dont Flood pack\n");
+                    // set flag = true
+                   // match = TRUE;
+                //  }
                   // if our table IS empty; Initialize and push into our RouteTable
                   if(call RouteTable.isEmpty()){
                     temp.node = TOS_NODE_ID;
                     temp.nextHop = TOS_NODE_ID;
-                    temp.seq = myMsg->seq;
+                    temp.seq = 0;
                     temp.arrLength = call Neighbors.size();
                     temp.cost = 0;
                     for(i = 0; i< temp.arrLength; i++) {
                       lspNeighbor = call Neighbors.get(i);
                       temp.neighbors[i] = lspNeighbor.nodeID;
                     }
-                    call RouteTable.pushfront(temp);                    
+                    call RouteTable.pushfront(temp);
                   }
                   // Else src is not current node                   
                   //else{
@@ -409,13 +387,15 @@ implementation{
                         temp = call RouteTable.front();
                         
                         // Check for most current LSP(SEQ) and Lowest cost
-                        if((LSP.node == temp.node)&&(LSP.cost < temp.cost) &&(LSP.seq>=temp.seq)){
+                        if((LSP.node == temp.node)&&(LSP.cost < temp.cost) ){
                            //dbg(GENERAL_CHANNEL,"INSIDE IF COST CHECK\n");
                           call RouteTable.popfront();  // Remove older LSP 
+                          flag = TRUE;
                         }
-                        else if((LSP.node == temp.node) && (LSP.cost > temp.cost)&&(LSP.seq>=temp.seq)){
+                        else if((LSP.node == temp.node) && (LSP.cost > temp.cost)){
                           call routeTemp.pushfront(call RouteTable.front());
                           call RouteTable.popfront();
+                          flag = TRUE;
                         }
                         
                         else {
@@ -431,20 +411,11 @@ implementation{
                           call routeTemp.popfront();
                         }
                       }
-                      
-                      /*
-                      i = 0;
-                      lsSize = 0;
-                      while(myMsg->payload[i] > 0){
-                        //Fill the LSP tables directly connected neighbors
-                        LSP.neighbors[i] = myMsg->payload[i];
-                        lsSize++;
-                        i++;
-                      }
-                      */                      
-                      //LSP.arrLength = lsSize;
  
                       if(call RouteTable.isEmpty()){                    
+                        call RouteTable.pushfront(LSP);
+                      }
+                      else if(flag == FALSE){
                         call RouteTable.pushfront(LSP);
                       }
                      // printLSP();
@@ -453,30 +424,43 @@ implementation{
                         seqNumber, (uint8_t*)myMsg->payload, (uint8_t)sizeof(myMsg->payload));
                       insertPack(sendPackage);
                       call Sender.send(sendPackage,AM_BROADCAST_ADDR);
-                      break;
+                      //break;
 
-                    }
+                    }// end if(call routetable isempty)
+            }// End if PROT == LINKSTATE
+            if(!flag && myMsg->protocol != PROTOCOL_LINKSTATE && myMsg->protocol != PROTOCOL_TCP){
+              Neighbor tempN;
+              NewNeighbor = call DroppedNeighbors.get(0);
+              size = call Neighbors.size();
 
-                    break;
-                  }
-          }
+              for(i = 0; i < size; i++) {
+                tempN = call Neighbors.get(i);
+                if(myMsg->src == tempN.nodeID) {
+                  match = TRUE;
+                }
+              }
+              if (match == TRUE){}
+              else {
+                NewNeighbor.nodeID = myMsg->src;
+                NewNeighbor.life = 0;
+                call Neighbors.pushback(NewNeighbor);
+              }
+            }                         
+          }         
 
-          // ---------NOT ENTERING HERE ------------
           // Reached Destination
-       if(myMsg->dest == TOS_NODE_ID) //|| myMsg->protocol == PROTOCOL_PINGREPLY)) 
+       else if(myMsg->dest == TOS_NODE_ID && myMsg->protocol == PROTOCOL_PING) //|| myMsg->protocol == PROTOCOL_PINGREPLY)) 
          {
-            dbg(FLOODING_CHANNEL,"Packet #%d arrived from %d with payload: %s\n", myMsg->seq, myMsg->src, myMsg->payload);
+          //if(myMsg->protocol == PROTOCOL_PING){
+            dbg(FLOODING_CHANNEL,"Packet arrived from %d with payload: %s\n",myMsg->src, myMsg->payload);
 
             // Protocol Ping forwards to nextHop from our Confirmed List
-            if( myMsg->protocol == PROTOCOL_PING ){
-
-            // PROTOCOL_PING: packet was pinged but no reply
-            //if(myMsg->protocol == PROTOCOL_PING) {
-              nextHop = 0;
+              //Dijkstra();
+              //nextHop = 0;
                dbg(FLOODING_CHANNEL,"Ping replying to %d\n", myMsg->src);
                //makepack with myMsg->src as destination              
                makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, seqNumber, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
-               seqNumber++;   // increase sequence id number
+               //seqNumber++;   // increase sequence id number
                // Push into seen/sent package list
                insertPack(sendPackage);
                dbg(GENERAL_CHANNEL, "BEFORE dest.nextHOP\n");
@@ -487,32 +471,43 @@ implementation{
                   nextHop = dest.nextHop;
                 }
                }
+               /*
+               for (n = 0; n < call Confirmed.size(); n++){
+                dest = call Confirmed.get(n);
+                if(myMsg->src == dest.node){
+                  makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, seqNumber, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
+                  insertPack(sendPackage);
+                  call Sender.send(sendPackage, dest.nextHop);
+                  break;
+                  //nextHop = dest.nextHop;
+                }
+               }
+               */
                // Send new packet
+               //dbg(ROUTING_CHANNEL,"pack for %d, sending to %d\n",myMsg->src, nextHop);
                call Sender.send(sendPackage, nextHop); // Send to nextHop
                //call Sender.send(sendPackage, AM_BROADCAST_ADDR);               
-            }
+          }// End else if prot == PROT_PING
 
             // PROTOCOL PINGREPLY: Packet at correct destination; Stop sending packet
-            if(myMsg->protocol == PROTOCOL_PINGREPLY) {
-               dbg(FLOODING_CHANNEL, "PING REPLY RECEIVED FROM %d\n ",myMsg->src);
-            }
-            if(myMsg->protocol == PROTOCOL_TCP){
+        else if(myMsg->protocol == PROTOCOL_PINGREPLY && myMsg->dest == TOS_NODE_ID) {
+               dbg(FLOODING_CHANNEL, "PING REPLY RECEIVED FROM %d !!\n ",myMsg->src);
+        }
+        else if(myMsg->protocol == PROTOCOL_TCP && myMsg->dest == TOS_NODE_ID){
               TCPProtocol(myMsg);
-            }
+        } 
 
-         }
-      
          // Packet does not belong to current node 
          // Flood Packet with TTL - 1
          // broadcast to neighbors
-         else {
+        else {
           uint16_t k = 0;
           uint16_t snd = 0;
           LinkState tempDest;
 
-          makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, sizeof(myMsg->payload));
+          makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, sizeof(myMsg->payload));
                //makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1,myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
-        //       dbg(FLOODING_CHANNEL, "Packet from %d, intended for %d is being Rebroadcasted.\n", myMsg->src, myMsg->dest);
+            //dbg(FLOODING_CHANNEL, "Packet from %d, intended for %d is being Rebroadcasted.\n", myMsg->src, myMsg->dest);
             insertPack(sendPackage);   // Packet to be inserted into seen packet list
             for (k = 0; k < call Confirmed.size(); k++) {
               tempDest = call Confirmed.get(k);
@@ -523,14 +518,17 @@ implementation{
             }
             call Sender.send(sendPackage,snd);
             //call Sender.send(sendPackage, AM_BROADCAST_ADDR);  // Resend packet
-          } 
-
+          }
+         
          //dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
-         return msg;
+        return msg;
       }
+
+      else{
       
       dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
       return msg;
+      }
    }
 
 
@@ -544,41 +542,24 @@ implementation{
     
       for (i = 0; i < call Confirmed.size(); i++){
         ls = call Confirmed.get(i);
-        if(ls.node == destination){
+        if(ls.node == destination){          
           dest = ls.nextHop;
         }
-      }      
-      //sendPackage.seq = sendPackage.seq + 1;
-      //makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, sendPackage.seq, payload, PACKET_MAX_PAYLOAD_SIZE);
-      dbg(GENERAL_CHANNEL,"PING!!! dest %d send to %d \n",destination, dest);
+      } 
+      
+      /*
+      makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
+      if(call tableroute.get(destination)){
+        call Sender.send(sendPackage, call tableroute.get(destination));
+      }
+  */
+      dbg(GENERAL_CHANNEL,"PING!!! dest %d Next Hop %d \n",destination, dest);
       makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
       // Changed from BROADCAST
-      insertPack(sendPackage);
-      call Sender.send(sendPackage, dest);
-      //if(call tableroute.get(destination)) {
-        //call Sender.send(sendPackage, call tableroute.get(destination)); // send to destination
-   // }
-     // seqNumber = seqNumber + 1;
-      
+      //insertPack(sendPackage);
+      call Sender.send(sendPackage, dest);      
    }
-   
-/*
-   event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
-    dbg(GENERAL_CHANNEL, "PING EVENT.\n");
 
-    makePack(&sendPackage, TOS_NODE_ID, destination,MAX_TTL,PROTOCOL_PING,seqNumber,payload,PACKET_MAX_PAYLOAD_SIZE);
-
-    seqNumber++;
-    insertPack(sendPackage);
-
-    if(call tableroute.get(destination)){
-      dbg(ROUTING_CHANNEL, "Sending next hop %d\n",call tableroute.get(destination));
-      call Sender.send(sendPackage,call tableroute.get(destination));
-      //call Sender.send(sendPackage,AM_BROADCAST_ADDR);
-    }
-
-   }
-*/
    event void CommandHandler.printNeighbors(){
 
     Neighbor nextneightbor;
@@ -603,8 +584,6 @@ implementation{
    event void CommandHandler.printRouteTable(){
       LinkState routing;
       uint16_t i =0;
-      //uint16_t size;
-      //size = call Confirmed.size();
       dbg(ROUTING_CHANNEL, "Print Route of node:%d\n",TOS_NODE_ID);
       for(i =0; i < call Confirmed.size(); i++){
             routing=  call Confirmed.get(i);
@@ -625,7 +604,7 @@ implementation{
     socket_addr_t address;
     //socket_t fd;  // global fd up top
 
-    dbg(GENERAL_CHANNEL, "inside setTestServer -- Initializing Server\n");
+    dbg(GENERAL_CHANNEL, "Inside setTestServer -- Initializing Server\n");
 
     address.addr = TOS_NODE_ID;
     address.port = port;
@@ -646,29 +625,40 @@ implementation{
    */
    event void CommandHandler.setTestClient(uint16_t dest, uint16_t srcPort, uint16_t destPort, uint16_t transfer){
     socket_addr_t address;  // socket address
-    socket_addr_t serverAdr;  // server address
+    socket_addr_t socketAdr,serverAdr;  // server address
 
     dbg(TRANSPORT_CHANNEL, "Inside setTestClient -- Testing Client.\n");
 
     fd = call Transport.socket();
 
     // Source and source port
-    address.addr = TOS_NODE_ID;
-    address.port = srcPort;
-    // Destination and dest port
-    serverAdr.addr = dest;
-    serverAdr.port = destPort;
+    socketAdr.addr = TOS_NODE_ID;
+    socketAdr.port = srcPort;
 
-    if(call Transport.bind(fd, &address) == SUCCESS) {
+
+    if(call Transport.bind(fd, &socketAdr) == SUCCESS) {
       dbg(TRANSPORT_CHANNEL, "Client successfully binded.\n");
+      // Destination and dest port
+      serverAdr.addr = dest;
+      serverAdr.port = destPort;
     }
-    call Transport.connect(fd, &serverAdr);
+    //call Transport.connect(fd, &serverAdr);
+    
+    if(call Transport.connect(fd,&serverAdr) == SUCCESS){
+      //call WriteTimer();
+      dbg(TRANSPORT_CHANNEL,"Transport.connect SUCCESS\n");
+    }
     
     dbg(TRANSPORT_CHANNEL, "Node %d is client with source port %d, and dest %d at their port %d.\n",
       TOS_NODE_ID, srcPort, dest, destPort);
 
 
    }
+   // cmdClientClose([client address],[dest],[srcPort],[destPort])
+   // Terminate Connection.
+   // find fd associated with [clieant address],[srcPort],[destPort],[dest];
+   //     close(fd)
+   //event void CommandHandler.ClientClose(uint8_t clientAddr, uint8_t srcPort, uint8_t destPort, uint8_t dest){}
 
    event void CommandHandler.setAppServer(){}
 
@@ -780,7 +770,7 @@ implementation{
    *      For every E, if sum of distance of V(from srouce) and cost V->E, is less than dist E, then update dist of E.
    * source: geeks for geeks shortest path
   */
-  
+  /*
 void Dijkstra(){
         uint16_t G[MAX][MAX];  //Tree: node/cost
         uint16_t i, path, V, E;
@@ -840,7 +830,7 @@ void Dijkstra(){
         
       // Fill our Confirmed List
       if(call Confirmed.isEmpty()){
-      for(i = 1; i <= 10; i++)
+      for(i = 1; i < 10; i++)
       {
         nextnode2.node = i;
         nextnode2.cost = G[TOS_NODE_ID][i];
@@ -851,7 +841,7 @@ void Dijkstra(){
     }
     
     }
-/*
+*/
   void Dijkstra()
   {
     int nodesize[20];
@@ -896,15 +886,7 @@ void Dijkstra(){
         }
       }
     }
-    if(TOS_NODE_ID == 1){
-    for(i = 0; i < mn; i++)
-    {
-      for(j = 0; j < mn; j++)
-      {
-        //printf("i=%d, j=%d, cost=%d\n", i, j, cost[i][j]);
-      }
-    }
-    }
+
 
     for(i = 0; i < mn; i++)
     {
@@ -977,12 +959,11 @@ void Dijkstra(){
         temp2.cost = cost[TOS_NODE_ID][i];
         temp2.nextHop = call tableroute.get(i);
         call Confirmed.pushfront(temp2);
-        //dbg(GENERAL_CHANNEL, "confirmed size: %d\n", call Confirmed.size());
       }
     }
     
   }
-  */
+  
 
 // ----------- Project 3 -------------
   // Iterate through list and find index that has Socket with matching port. Then Check Flag
@@ -996,7 +977,7 @@ void Dijkstra(){
     socket_store_t tempSocket;
     socket_store_t stateSocket;
     socket_addr_t tempAddr;
-    //tcp_pack* msg = (tcp_pack*) myMsg->payload;
+    
     int i,j,k;
     uint8_t srcPort, destPort;
     LinkState dest;
@@ -1006,16 +987,17 @@ void Dijkstra(){
     // SYN_ACK Packet
     pack SynAckPack;
 
+    //tcp_pack* msg = (tcp_pack*) myMsg->payload;
     receivedSocket = myMsg->payload;
     tempAddr = receivedSocket->dest;
-    //Get our Next Destination
+
     // ------------------ CHANGE TO SWITCH TO HANDLE 3-WAY HANDSHAKE ---------------
     //Find right socket
     for(i = 0; i < MAX_NUM_OF_SOCKETS; i++){
       tempSocket = call Socketlist.get(i);
       // Check for Port and Source; Listening; And Check Flag 1 for SYN.
       // If Found send a SYN_ACK
-      if(receivedSocket->flag == 1 && tempAddr.port == tempSocket.src && tempSocket.state == LISTEN && tempAddr.addr == TOS_NODE_ID) {
+      if(receivedSocket->flag == 1){// && tempAddr.port == tempSocket.src && tempSocket.state == LISTEN && tempAddr.addr == TOS_NODE_ID) {
         // Update Socket State and Bind
         tempSocket.flag = 2;
         tempSocket.dest.port = receivedSocket->src;
@@ -1060,49 +1042,63 @@ void Dijkstra(){
         */
 
         dbg(TRANSPORT_CHANNEL,"SYN packet received from Node %d port %d, replying SYN_ACK.\n", myMsg->src, receivedSocket->src);
-        //if(call tableroute.get(tempSocket.dest.addr))
-          //call Sender.send(SynAckPack, call tableroute.get(tempSocket.dest.addr)); //brimo
-        //else
-        
-        }  //dbg(TRANSPORT_CHANNEL, "Cant find route to client.\n");
-        call Sender.send(SynAckPack,next);  //aye
+
+          
+        call Sender.send(SynAckPack,next); 
         
       }//end if
+      }// End for
 
       // Flag2: SYN_ACK packet
       if(receivedSocket->flag == 2){
         // Pack to reply to the SYN_ACK; Connection has been ESTABLISHED
         pack AckPack;
 
-        dbg(TRANSPORT_CHANNEL,"Received SYN_ACK.\n");
+        //dbg(TRANSPORT_CHANNEL,"Received SYN_ACK.\n");
 
         //Update Socket State and Bind
         tempSocket.flag = 3;
         tempSocket.dest.port = receivedSocket->src;
         tempSocket.dest.addr = myMsg->src;
         tempSocket.state = ESTABLISHED;
-        //call Transport.bind(tempSocket.fd, tempSocket); // Change to setSocket/Update
 
         //Make ACK packet
-        makePack(&AckPack, TOS_NODE_ID, myMsg->src, myMsg->TTL, PROTOCOL_TCP, myMsg->seq, &tempSocket, (uint8_t)sizeof(tempSocket));
+        //makePack(&AckPack, TOS_NODE_ID, myMsg->src, myMsg->TTL, PROTOCOL_TCP, myMsg->seq, &tempSocket, (uint8_t)sizeof(tempSocket));
+        AckPack.dest = myMsg->src;
+        AckPack.src = TOS_NODE_ID;
+        AckPack.seq = myMsg->seq + 1;
+        AckPack.TTL = myMsg->TTL;
+        AckPack.protocol = PROTOCOL_TCP;
+
+        memcpy(AckPack.payload,&tempSocket, (uint8_t)sizeof(tempSocket));
 
         dbg(TRANSPORT_CHANNEL,"SYN_ACK received, connection ESTABLISHED, replying with ACK.\n");
 
-        call Sender.send(AckPack, call tableroute.get(tempSocket.dest.addr));       
+        //call Sender.send(AckPack, call tableroute.get(tempSocket.dest.addr));     
+        // Get Our Next Destination
+        for(j = 0; j < call Confirmed.size();j++){
+          dest = call Confirmed.get(j);
+          if (AckPack.dest == dest.node){
+            next = dest.nextHop;
+          }
+        }  
+        call Sender.send(AckPack, next);
 
 
-      }
+      } // End flag == 2
      if(receivedSocket->flag == 3){
-        dbg(TRANSPORT_CHANNEL,"Received ACK.\n");
+        dbg(TRANSPORT_CHANNEL,"Received ACK 3-Way Handshake Complete.\n");
 
         tempSocket = call Socketlist.get(i);
 
+        //update the state of the socket
         tempSocket.state = ESTABLISHED;
 
-        //call Transport.bind(tempSocket.fd, tempSocket); // Change to setSocket/Update
-      }
-    }//end for
-}
+      }// End flag == 3
+    //}//end for
+  }// End TCPProtocol
+
+} // END END
 
 
     
