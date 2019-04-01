@@ -1004,7 +1004,7 @@ void Dijkstra(){
     //tcp_pack* msg = (tcp_pack*) myMsg->payload;
     receivedSocket = myMsg->payload;
     tempAddr = receivedSocket->dest;
-    //Get our Next Destination
+
     // ------------------ CHANGE TO SWITCH TO HANDLE 3-WAY HANDSHAKE ---------------
     //Find right socket
     for(i = 0; i < MAX_NUM_OF_SOCKETS; i++){
@@ -1056,11 +1056,8 @@ void Dijkstra(){
         */
 
         dbg(TRANSPORT_CHANNEL,"SYN packet received from Node %d port %d, replying SYN_ACK.\n", myMsg->src, receivedSocket->src);
-        //if(call tableroute.get(tempSocket.dest.addr))
-          //call Sender.send(SynAckPack, call tableroute.get(tempSocket.dest.addr));
-        //else
-        
-        }  //dbg(TRANSPORT_CHANNEL, "Cant find route to client.\n");
+
+        }  
         call Sender.send(SynAckPack,next); 
         
       }//end if
@@ -1070,32 +1067,45 @@ void Dijkstra(){
         // Pack to reply to the SYN_ACK; Connection has been ESTABLISHED
         pack AckPack;
 
-        dbg(TRANSPORT_CHANNEL,"Received SYN_ACK.\n");
+        //dbg(TRANSPORT_CHANNEL,"Received SYN_ACK.\n");
 
         //Update Socket State and Bind
         tempSocket.flag = 3;
         tempSocket.dest.port = receivedSocket->src;
         tempSocket.dest.addr = myMsg->src;
         tempSocket.state = ESTABLISHED;
-        //call Transport.bind(tempSocket.fd, tempSocket); // Change to setSocket/Update
 
         //Make ACK packet
-        makePack(&AckPack, TOS_NODE_ID, myMsg->src, myMsg->TTL, PROTOCOL_TCP, myMsg->seq, &tempSocket, (uint8_t)sizeof(tempSocket));
+        //makePack(&AckPack, TOS_NODE_ID, myMsg->src, myMsg->TTL, PROTOCOL_TCP, myMsg->seq, &tempSocket, (uint8_t)sizeof(tempSocket));
+        AckPack.dest = myMsg->src;
+        AckPack.src = TOS_NODE_ID;
+        AckPack.seq = myMsg->seq + 1;
+        AckPack.TTL = myMsg->TTL;
+        AckPack.protocol = PROTOCOL_TCP;
+
+        memcpy(AckPack.payload,&tempSocket, (uint8_t)sizeof(tempSocket));
 
         dbg(TRANSPORT_CHANNEL,"SYN_ACK received, connection ESTABLISHED, replying with ACK.\n");
 
-        call Sender.send(AckPack, call tableroute.get(tempSocket.dest.addr));       
+        //call Sender.send(AckPack, call tableroute.get(tempSocket.dest.addr));     
+        // Get Our Next Destination
+        for(j = 0; j < call Confirmed.size();j++){
+          dest = call Confirmed.get(j);
+          if (AckPack.dest == dest.node){
+            next = dest.nextHop;
+          }
+        }  
+        call Sender.send(AckPack, next);
 
 
       }
      if(receivedSocket->flag == 3){
-        dbg(TRANSPORT_CHANNEL,"Received ACK.\n");
+        dbg(TRANSPORT_CHANNEL,"Received ACK 3-Way Handshake Complete.\n");
 
         tempSocket = call Socketlist.get(i);
 
         tempSocket.state = ESTABLISHED;
 
-        //call Transport.bind(tempSocket.fd, tempSocket); // Change to setSocket/Update
       }
     }//end for
 }
