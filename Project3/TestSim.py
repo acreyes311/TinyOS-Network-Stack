@@ -15,6 +15,7 @@ class TestSim:
     CMD_ROUTE_DUMP=3
     CMD_TEST_CLIENT = 4
     CMD_TEST_SERVER = 5
+    #CMD_CLIENT_CLOSE = 6
 
     # CHANNELS - see includes/channels.h
     COMMAND_CHANNEL="command";
@@ -143,8 +144,8 @@ class TestSim:
     def TestClient(self, source, sourcePort, destPort, dest, transfer):
         self.sendCMD(self.CMD_TEST_CLIENT, source, "{0}{1}{2}{3}".format(chr(dest),chr(sourcePort),chr(destPort),transfer));
 
-    # def ClientClose(self, ClientAddress, destination, srcPort, destPort):
-    #     self.sendCMD(self.CMD_CLIENT_CLOSE, source, "{0}{1}{2}".format(chr(destination),chr(srcPort),destPort));
+    # def ClientClose(self, clientAddr, destination, srcPort, destPort):
+    #     self.sendCMD(self.CMD_CLIENT_CLOSE, source, "{0}{1}{2}".format(chr(destination),chr(srcPort),chr(destPort)));
 
 
 

@@ -658,7 +658,8 @@ implementation{
    // Terminate Connection.
    // find fd associated with [clieant address],[srcPort],[destPort],[dest];
    //     close(fd)
-   //event void CommandHandler.ClientClose(uint8_t clientAddr, uint8_t srcPort, uint8_t destPort, uint8_t dest){}
+   //event void CommandHandler.ClientClose(uint8_t clientAddr, uint8_t srcPort, uint8_t destPort, uint8_t dest)  {}
+
 
    event void CommandHandler.setAppServer(){}
 
