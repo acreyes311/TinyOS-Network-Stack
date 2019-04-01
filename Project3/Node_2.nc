@@ -900,16 +900,7 @@ void Dijkstra(){
         }
       }
     }
-    // Does nothing ?
-    //if(TOS_NODE_ID == 1){
-    //for(i = 0; i < mn; i++)
-    //{
-     // for(j = 0; j < mn; j++)
-     // {
-        //printf("i=%d, j=%d, cost=%d\n", i, j, cost[i][j]);
-      //}
-    //}
-    //}
+
 
     for(i = 0; i < mn; i++)
     {
@@ -1020,7 +1011,7 @@ void Dijkstra(){
       tempSocket = call Socketlist.get(i);
       // Check for Port and Source; Listening; And Check Flag 1 for SYN.
       // If Found send a SYN_ACK
-      if(receivedSocket->flag == 1 && tempAddr.port == tempSocket.src && tempSocket.state == LISTEN && tempAddr.addr == TOS_NODE_ID) {
+      if(receivedSocket->flag == 1){// && tempAddr.port == tempSocket.src && tempSocket.state == LISTEN && tempAddr.addr == TOS_NODE_ID) {
         // Update Socket State and Bind
         tempSocket.flag = 2;
         tempSocket.dest.port = receivedSocket->src;
@@ -1066,11 +1057,11 @@ void Dijkstra(){
 
         dbg(TRANSPORT_CHANNEL,"SYN packet received from Node %d port %d, replying SYN_ACK.\n", myMsg->src, receivedSocket->src);
         //if(call tableroute.get(tempSocket.dest.addr))
-          //call Sender.send(SynAckPack, call tableroute.get(tempSocket.dest.addr)); //brimo
+          //call Sender.send(SynAckPack, call tableroute.get(tempSocket.dest.addr));
         //else
         
         }  //dbg(TRANSPORT_CHANNEL, "Cant find route to client.\n");
-        call Sender.send(SynAckPack,next);  //aye
+        call Sender.send(SynAckPack,next); 
         
       }//end if
 
