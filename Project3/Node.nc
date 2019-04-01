@@ -91,7 +91,8 @@ implementation{
    Neighbor NewNeighbor;
    Neighbor TempNeighbor;
    socket_t fd; // Global fd/socket
-   uint32_t TimeReceived, TimeSent;
+   uint32_t TimeReceived; 
+   uint32_t TimeSent;
 
    // Prototypes
    bool isKnown(pack *p);  // already seen function
@@ -600,6 +601,8 @@ implementation{
     * Listens for connections
     * If accepted a new socket is made for that connection and server continues to listen
    */
+
+
    event void CommandHandler.setTestServer(uint16_t port){
     socket_addr_t address;
     //socket_t fd;  // global fd up top
@@ -611,13 +614,13 @@ implementation{
 
     fd = call Transport.socket();
 
-
     if(call Transport.bind(fd, &address) == SUCCESS && call Transport.listen(fd) == SUCCESS)
       dbg(TRANSPORT_CHANNEL, "Socket %d is Listening.\n", fd);
     else
       dbg(TRANSPORT_CHANNEL, "Unable to set socket %d.\n", fd);
 
-   }
+   }// End setTestServer
+
 
    /* ----- Set Test Client -----
     * Initiates client and binds it to [srcPort], attempts to make connection to [dest] at port [destPort]
@@ -629,6 +632,7 @@ implementation{
 
     dbg(TRANSPORT_CHANNEL, "Inside setTestClient -- Testing Client.\n");
 
+    // Get Socket fd
     fd = call Transport.socket();
 
     // Source and source port
@@ -641,19 +645,20 @@ implementation{
       // Destination and dest port
       serverAdr.addr = dest;
       serverAdr.port = destPort;
-    }
-    //call Transport.connect(fd, &serverAdr);
-    
+
+      //TimeSent = call LocalTime.getNow();
     if(call Transport.connect(fd,&serverAdr) == SUCCESS){
       //call WriteTimer();
       dbg(TRANSPORT_CHANNEL,"Transport.connect SUCCESS\n");
     }
+  }
     
     dbg(TRANSPORT_CHANNEL, "Node %d is client with source port %d, and dest %d at their port %d.\n",
       TOS_NODE_ID, srcPort, dest, destPort);
 
+   }// End setTestClient
 
-   }
+
    // cmdClientClose([client address],[dest],[srcPort],[destPort])
    // Terminate Connection.
    // find fd associated with [clieant address],[srcPort],[destPort],[dest];
@@ -843,8 +848,7 @@ void Dijkstra(){
     
     }
 */
-  void Dijkstra()
-  {
+  void Dijkstra(){
     int nodesize[20];
     int size = call RouteTable.size();
     int mn = 20;
@@ -962,7 +966,6 @@ void Dijkstra(){
         call Confirmed.pushfront(temp2);
       }
     }
-    
   }
   
 
