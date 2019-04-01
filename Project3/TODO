@@ -18,10 +18,11 @@ Implement transportC.nc and transportP.nc under lib/modules
             Still Need to TCPProtocol flag = 4 and the rest of it?
             Check that whatever we have in TransportP is correct.
             
+* 3/31/10 - I think in order to finish mid-review we need to do Transport read(),write(), and close().
+            And then the TCPProtocol function, where flag 4 = read, flag 5 = write and flag 6 = close (teardown)
+            Ive been using mostly vancu,aye,foreman or brimo
             
 * Setup and teardown
 *** Start of data transfer, using simplest to implement stop and wait protocol. 
 
-* Started working on setTestClient andd setTestServer. (Haven't implemented timers that go inside those functions yet.)
-Still not too sure what exactly we have to implement for the mid review yet.
 
