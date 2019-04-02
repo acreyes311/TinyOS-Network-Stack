@@ -18,7 +18,7 @@
 //#include "includes/tcp_pack.h"
 
 #define INFINITY 9999
-#define MAX 10
+#define MAX 20
 
 typedef nx_struct Neighbor {
    nx_uint16_t nodeID;
@@ -848,107 +848,111 @@ void Dijkstra(){
     
     }
 */
-  void Dijkstra(){
-    int nodesize[20];
-    int size = call RouteTable.size();
-    int mn = 20;
-    int i,j,nexthop,cost[mn][mn],distance[mn],plist[mn];
-    int visited[mn],ncount,mindistance,nextnode;
+  
+void Dijkstra(){
+    uint16_t nodesize[MAX];
+    uint16_t size = call RouteTable.size();
+    uint16_t i,j,nexthop;
+    uint16_t Cost[MAX][MAX];
+    uint16_t dist[MAX],path[MAX], V[MAX];
+    uint16_t num,mindist,next;
 
-    int start_node = TOS_NODE_ID;
-    bool aMatrix[mn][mn];
+    uint16_t base = TOS_NODE_ID;
+    bool G[MAX][MAX];
 
-    LinkState temp, temp2;
+    LinkState nextnode;
+    LinkState nextnode2;
 
-    for(i = 0; i < mn; i++)
+    for(i = 0; i < MAX; i++)
     {
-      for(j = 0; j < mn; j++)
+      for(j = 0; j < MAX; j++)
       {
-        aMatrix[i][j] = FALSE;
+        G[i][j] = FALSE;
       }
     }
     
     for(i = 0; i < size; i++)
     {
-      temp = call RouteTable.get(i);
-      for(j = 0; j < temp.arrLength; j++)
+      nextnode = call RouteTable.get(i);
+      for(j = 0; j < nextnode.arrLength; j++)
       {
-        aMatrix[temp.node][temp.neighbors[j]] = TRUE;
+        G[nextnode.node][nextnode.neighbors[j]] = TRUE;
       }
     }
 
-    for(i = 0; i < mn; i++)
+    for(i = 0; i < MAX; i++)
     {
-      for(j = 0; j < mn; j++)
+      for(j = 0; j < MAX; j++)
       {
-        if(aMatrix[i][j] == FALSE)
+        if(G[i][j] == FALSE)
         {
-          cost[i][j] = INFINITY;
+          Cost[i][j] = INFINITY;
         }
         else
         {
-          cost[i][j] = 1;
+          Cost[i][j] = 1;//G[i][j]
         }
       }
     }
-
-
-    for(i = 0; i < mn; i++)
+    //initialize dist[], path[], and Visited node
+    for(i = 0; i < MAX; i++)
     {
-      distance[i] = cost[start_node][i];
-      plist[i] = start_node;
-      visited[i] = 0;
+      dist[i] = Cost[base][i];
+      path[i] = base;
+      V[i] = 0;
     }
     
-    distance[start_node] = 0;
-    visited[start_node] = 1;
-    ncount = 1;
+    dist[base] = 0;
+    V[base] = 1;
+    num = 1;
 
-    while(ncount < mn - 1)
+    while(num < MAX - 1)
     {
-      mindistance = INFINITY;
-      for(i = 0; i < mn; i++)
+      mindist = INFINITY;
+      //nextnode gives the node at minimum distance
+      for(i = 0; i < MAX; i++)
       {
-        if(distance[i] <= mindistance && visited[i] == 0)
+        if(dist[i] <= mindist && V[i] == 0)
         {
-          mindistance = distance[i];
-          nextnode = i;
+          mindist = dist[i];
+          next = i;
         }
       }
-      visited[nextnode] = 1;
-      for(i = 0; i < mn; i++)
+      //check if a better path exits through nextnode
+      V[next] = 1;
+      for(i = 0; i < MAX; i++)
       {
-        if(visited[i] == 0)
+        if(V[i] == 0)
         {
-          if(mindistance + cost[nextnode][i] < distance[i])
+          if(mindist + Cost[next][i] < dist[i])
           {
-            distance[i] = mindistance + cost[nextnode][i];
-            plist[i] = nextnode;
+            dist[i] = mindist + Cost[next][i];
+            path[i] = next;
           }
         }
       }
-      ncount++;
+      num++;
     }
-
-    for(i = 0; i < mn; i++)
+    //path and distance of each node
+    for(i = 0; i < MAX; i++)
     {
       nexthop = TOS_NODE_ID;
-      if(distance[i] != INFINITY)
+      if(dist[i] != INFINITY)
       {
-        if(i != start_node)
+        if(i != base)
         {
           j = i;
           do {
-            if(j != start_node)
+            if(j != base)
             {
               nexthop = j;
             }
-            j = plist[j];
-          } while(j != start_node);
+            j = path[j];
+          } while(j != base);
         }
         else
         {
-          nexthop = start_node;
+          nexthop = base;
         }
         if(nexthop != 0)
         {
@@ -960,12 +964,12 @@ void Dijkstra(){
     {
       for(i = 1; i <= 10; i++)
       {
-        temp2.node = i;
-        temp2.cost = cost[TOS_NODE_ID][i];
-        temp2.nextHop = call tableroute.get(i);
-        call Confirmed.pushfront(temp2);
+        nextnode2.node = i;
+        nextnode2.cost = Cost[base][i];
+        nextnode2.nextHop = call tableroute.get(i);
+        call Confirmed.pushfront(nextnode2);
       }
-    }
+    } 
   }
   
 
