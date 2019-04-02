@@ -18,7 +18,7 @@
 //#include "includes/tcp_pack.h"
 
 #define INFINITY 9999
-#define MAX 20
+#define MAX 10
 
 typedef nx_struct Neighbor {
    nx_uint16_t nodeID;
@@ -663,8 +663,15 @@ implementation{
    // Terminate Connection.
    // find fd associated with [clieant address],[srcPort],[destPort],[dest];
    //     close(fd)
-   //event void CommandHandler.ClientClose(uint8_t clientAddr, uint8_t srcPort, uint8_t destPort, uint8_t dest)  {}
+   /*
+   event void CommandHandler.ClientClose(uint8_t clientAddr, uint8_t srcPort, uint8_t destPort, uint8_t dest)  {
+    int i;
+    socket_store_t socket;
+    socket_t fd;
 
+    call Transport.close(fd);
+   }
+  */
 
    event void CommandHandler.setAppServer(){}
 
@@ -848,8 +855,8 @@ void Dijkstra(){
     
     }
 */
-  
-void Dijkstra(){
+  void Dijkstra(){
+
     uint16_t nodesize[MAX];
     uint16_t size = call RouteTable.size();
     uint16_t i,j,nexthop;
@@ -863,40 +870,32 @@ void Dijkstra(){
     LinkState nextnode;
     LinkState nextnode2;
 
-    for(i = 0; i < MAX; i++)
-    {
-      for(j = 0; j < MAX; j++)
-      {
+    for(i = 0; i < MAX; i++) {
+      for(j = 0; j < MAX; j++) {
         G[i][j] = FALSE;
       }
     }
     
-    for(i = 0; i < size; i++)
-    {
+    for(i = 0; i < size; i++) {
       nextnode = call RouteTable.get(i);
-      for(j = 0; j < nextnode.arrLength; j++)
-      {
+      for(j = 0; j < nextnode.arrLength; j++){
         G[nextnode.node][nextnode.neighbors[j]] = TRUE;
       }
     }
 
-    for(i = 0; i < MAX; i++)
-    {
-      for(j = 0; j < MAX; j++)
-      {
-        if(G[i][j] == FALSE)
-        {
+    for(i = 0; i < MAX; i++){
+      for(j = 0; j < MAX; j++){
+        if(G[i][j] == FALSE){
           Cost[i][j] = INFINITY;
         }
-        else
-        {
+        else {
           Cost[i][j] = 1;//G[i][j]
         }
       }
     }
+
     //initialize dist[], path[], and Visited node
-    for(i = 0; i < MAX; i++)
-    {
+    for(i = 0; i < MAX; i++) {
       dist[i] = Cost[base][i];
       path[i] = base;
       V[i] = 0;
@@ -906,26 +905,22 @@ void Dijkstra(){
     V[base] = 1;
     num = 1;
 
-    while(num < MAX - 1)
-    {
+    while(num < MAX - 1){
       mindist = INFINITY;
       //nextnode gives the node at minimum distance
-      for(i = 0; i < MAX; i++)
-      {
-        if(dist[i] <= mindist && V[i] == 0)
-        {
+      for(i = 0; i < MAX; i++){
+        if(dist[i] <= mindist && V[i] == 0){
           mindist = dist[i];
           next = i;
         }
       }
+
       //check if a better path exits through nextnode
       V[next] = 1;
-      for(i = 0; i < MAX; i++)
-      {
-        if(V[i] == 0)
-        {
-          if(mindist + Cost[next][i] < dist[i])
-          {
+
+      for(i = 0; i < MAX; i++) {
+        if(V[i] == 0) {
+          if(mindist + Cost[next][i] < dist[i]) {
             dist[i] = mindist + Cost[next][i];
             path[i] = next;
           }
@@ -933,37 +928,35 @@ void Dijkstra(){
       }
       num++;
     }
+
     //path and distance of each node
-    for(i = 0; i < MAX; i++)
-    {
+    for(i = 0; i < MAX; i++){
       nexthop = TOS_NODE_ID;
-      if(dist[i] != INFINITY)
-      {
-        if(i != base)
-        {
+      if(dist[i] != INFINITY){
+        if(i != base) {
           j = i;
+
           do {
-            if(j != base)
-            {
+            if(j != base){
               nexthop = j;
             }
             j = path[j];
           } while(j != base);
         }
-        else
-        {
+
+        else {
           nexthop = base;
         }
-        if(nexthop != 0)
-        {
+
+        if(nexthop != 0){
           call tableroute.insert(i, nexthop);
         }
       }
     }
-    if(call Confirmed.isEmpty())
-    {
-      for(i = 1; i <= 10; i++)
-      {
+    
+    // Transfer to confirmed list
+    if(call Confirmed.isEmpty()){
+      for(i = 1; i <= 10; i++){
         nextnode2.node = i;
         nextnode2.cost = Cost[base][i];
         nextnode2.nextHop = call tableroute.get(i);
@@ -1010,7 +1003,7 @@ void Dijkstra(){
         tempSocket.flag = 2;
         tempSocket.dest.port = receivedSocket->src;
         tempSocket.dest.addr = myMsg->src;
-        tempSocket.state = SYN_RCVD;
+        //tempSocket.state = SYN_RCVD;
         //call Transport.bind(tempSocket.fd, tempSocket); // Change to setSocket/Update
 
         //Make our SYN_ACK
@@ -1064,7 +1057,7 @@ void Dijkstra(){
 
         //dbg(TRANSPORT_CHANNEL,"Received SYN_ACK.\n");
 
-        //Update Socket State and Bind
+        //Update Socket State
         tempSocket.flag = 3;
         tempSocket.dest.port = receivedSocket->src;
         tempSocket.dest.addr = myMsg->src;
