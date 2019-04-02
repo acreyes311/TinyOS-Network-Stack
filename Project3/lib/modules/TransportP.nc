@@ -236,8 +236,13 @@ implementation {
     * @return uint16_t - return SUCCESS if you are able to handle this
     *    packet or FAIL if there are errors.
     */
-   command error_t Transport.receive(pack* package) {
-
+   command error_t Transport.receive(pack* package) {     
+        if(package->protocol ==PROTOCOL_TCP){
+            return SUCCESS;
+        }
+        else{
+            return FAIL;
+        }
    }
 
    /**
