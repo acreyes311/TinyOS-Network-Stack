@@ -639,7 +639,7 @@ implementation{
     socketAdr.addr = TOS_NODE_ID;
     socketAdr.port = srcPort;
 
-
+    //Bind Client socket to Socket Adddress
     if(call Transport.bind(fd, &socketAdr) == SUCCESS) {
       dbg(TRANSPORT_CHANNEL, "Client successfully binded.\n");
       // Destination and dest port
@@ -973,6 +973,7 @@ void Dijkstra(){
   // Flag 2: Received SYN_ACK from src, Send ACK, change state to ESTABLISHED
   // FLAG 3: Received ACK from src, change state to ESTABLISHED
   // After flag 3 both client and server states are established and ready to transmit data
+  
   void TCPProtocol(pack *myMsg) {
     socket_store_t* receivedSocket;
     socket_store_t tempSocket;
