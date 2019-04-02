@@ -677,6 +677,157 @@ implementation{
 
    event void CommandHandler.setAppClient(){}
 
+
+   // ----------- Project 3 TCP PROTOCOL-------------
+  // Iterate through list and find index that has Socket with matching port. Then Check Flag
+
+  // Flag 1: Received SYN from src, Send SYN_ACK, change state to SYN_RCVD
+  // Flag 2: Received SYN_ACK from src, Send ACK, change state to ESTABLISHED
+  // FLAG 3: Received ACK from src, change state to ESTABLISHED
+  // After flag 3 both client and server states are established and ready to transmit data
+
+  void TCPProtocol(pack *myMsg) {
+    socket_store_t* receivedSocket;
+    socket_store_t tempSocket;
+    socket_store_t stateSocket;
+    socket_addr_t tempAddr;
+    
+    int i,j,k;
+    uint8_t srcPort, destPort;
+    LinkState dest;
+    LinkState ls;
+    uint16_t next;
+
+    // SYN_ACK Packet
+    pack SynAckPack;
+
+    //tcp_pack* msg = (tcp_pack*) myMsg->payload;
+    receivedSocket = myMsg->payload;
+    tempAddr = receivedSocket->dest;
+
+
+    // ------------------ CHANGE TO SWITCH TO HANDLE 3-WAY HANDSHAKE ---------------
+    //Find right socket
+    for(i = 0; i < MAX_NUM_OF_SOCKETS; i++){
+      tempSocket = call Transport.getSocket(i);
+      // Check for Port and Source; Listening; And Check Flag 1 for SYN.
+      // If Found send a SYN_ACK
+      if(receivedSocket->flag == 1){// && tempAddr.port == tempSocket.src && tempSocket.state == LISTEN && tempAddr.addr == TOS_NODE_ID) {
+        // Update Socket State and Bind
+        tempSocket.flag = 2;
+        tempSocket.dest.port = receivedSocket->src;
+        tempSocket.dest.addr = myMsg->src;
+        tempSocket.state = SYN_RCVD;
+        //call Transport.bind(tempSocket.fd, tempSocket); // Change to setSocket/Update
+        call Transport.setSocket(tempSocket.fd, tempSocket);//update socketlist
+
+        //Make our SYN_ACK
+        //makePack(&SynAckPack, TOS_NODE_ID, myMsg->src, myMsg->TTL, PROTOCOL_TCP, myMsg->seq, &tempSocket, (uint8_t)sizeof(tempSocket));
+        SynAckPack.dest = myMsg->src;
+        SynAckPack.src = TOS_NODE_ID;
+        SynAckPack.seq = myMsg->seq + 1;
+        SynAckPack.TTL = myMsg->TTL;
+        SynAckPack.protocol = PROTOCOL_TCP;
+
+        //memcpy(dest, src, count)
+        memcpy(SynAckPack.payload, &tempSocket, (uint8_t)sizeof(tempSocket));
+
+        // Get Our Next Destination
+        for(j = 0; j < call Confirmed.size();j++){
+          dest = call Confirmed.get(j);
+          if (SynAckPack.dest == dest.node){
+            next = dest.nextHop;
+          }
+        }
+
+        /*
+        while (!Socketlist.isEmpty()){
+          stateSocket = call Socketlist.front();
+          if(stateSocket.fd == i) {
+            stateSocket.state = SYN_RCVD;
+            call localSocketList.pushfront(stateSocket);
+          }
+          else{
+            call localSocketList.pushfront(stateSocket);
+          }
+        }
+          while(!call localSocketList.isEmpty()){
+            call Socketlist.pushfront(call localSocketList.front());
+            call localSocketList.popfront();
+          }
+        */
+
+        dbg(TRANSPORT_CHANNEL,"SYN packet received from Node %d port %d, replying SYN_ACK.\n", myMsg->src, receivedSocket->src);
+
+          
+        call Sender.send(SynAckPack,next); 
+        return;
+        
+      }//end if
+      //}// End for
+
+      // Flag2: SYN_ACK packet
+      if(receivedSocket->flag == 2){
+        // Pack to reply to the SYN_ACK; Connection has been ESTABLISHED
+        pack AckPack;
+
+        //dbg(TRANSPORT_CHANNEL,"Received SYN_ACK.\n");
+        tempSocket = call Transport.getSocket(i);
+        //Update Socket State
+        tempSocket.flag = 3;
+        tempSocket.dest.port = receivedSocket->src;
+        tempSocket.dest.addr = myMsg->src;
+        tempSocket.state = ESTABLISHED;
+        call Transport.setSocket(tempSocket.fd, tempSocket);
+        //Make ACK packet
+        //makePack(&AckPack, TOS_NODE_ID, myMsg->src, myMsg->TTL, PROTOCOL_TCP, myMsg->seq, &tempSocket, (uint8_t)sizeof(tempSocket));
+        AckPack.dest = myMsg->src;
+        AckPack.src = TOS_NODE_ID;
+        AckPack.seq = myMsg->seq + 1;
+        AckPack.TTL = myMsg->TTL;
+        AckPack.protocol = PROTOCOL_TCP;
+
+        memcpy(AckPack.payload,&tempSocket, (uint8_t)sizeof(tempSocket));
+
+        dbg(TRANSPORT_CHANNEL,"SYN_ACK received, connection ESTABLISHED, replying with ACK.\n");
+
+        //call Sender.send(AckPack, call tableroute.get(tempSocket.dest.addr));     
+        // Get Our Next Destination
+        for(j = 0; j < call Confirmed.size();j++){
+          dest = call Confirmed.get(j);
+          if (AckPack.dest == dest.node){
+            next = dest.nextHop;
+          }
+        }  
+        call Sender.send(AckPack, next);
+        return;
+
+      } // End flag == 2
+      
+     if(receivedSocket->flag == 3){
+        
+        tempSocket = call Transport.getSocket(i);
+        dbg(TRANSPORT_CHANNEL,"Received ACK 3-Way Handshake Complete.\n");
+        
+      if(tempSocket.state == SYN_RCVD){
+          call Socketlist.pushfront(tempSocket);
+      }
+        //call Transport.
+
+        //update the state of the socket
+        tempSocket.state = ESTABLISHED;
+        call Transport.setSocket(tempSocket.fd, tempSocket);
+
+        return;
+
+      }// End flag == 3
+
+      //if(receivedSocket->flag ==4){ 
+      }
+    }//end for
+
+  }// End TCPProtocol
+
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint8_t length){
       Package->src = src;
       Package->dest = dest;
@@ -855,6 +1006,7 @@ void Dijkstra(){
     
     }
 */
+// New Dijkstra shortest path algorithm from The Crazy Programmer
   void Dijkstra(){
 
     uint16_t nodesize[MAX];
@@ -966,146 +1118,7 @@ void Dijkstra(){
   }
   
 
-// ----------- Project 3 -------------
-  // Iterate through list and find index that has Socket with matching port. Then Check Flag
 
-  // Flag 1: Received SYN from src, Send SYN_ACK, change state to SYN_RCVD
-  // Flag 2: Received SYN_ACK from src, Send ACK, change state to ESTABLISHED
-  // FLAG 3: Received ACK from src, change state to ESTABLISHED
-  // After flag 3 both client and server states are established and ready to transmit data
-  
-  void TCPProtocol(pack *myMsg) {
-    socket_store_t* receivedSocket;
-    socket_store_t tempSocket;
-    socket_store_t stateSocket;
-    socket_addr_t tempAddr;
-    
-    int i,j,k;
-    uint8_t srcPort, destPort;
-    LinkState dest;
-    LinkState ls;
-    uint16_t next;
-
-    // SYN_ACK Packet
-    pack SynAckPack;
-
-    //tcp_pack* msg = (tcp_pack*) myMsg->payload;
-    receivedSocket = myMsg->payload;
-    tempAddr = receivedSocket->dest;
-
-
-    // ------------------ CHANGE TO SWITCH TO HANDLE 3-WAY HANDSHAKE ---------------
-    //Find right socket
-    for(i = 0; i < MAX_NUM_OF_SOCKETS; i++){
-      tempSocket = call Transport.getSocket(i);
-      // Check for Port and Source; Listening; And Check Flag 1 for SYN.
-      // If Found send a SYN_ACK
-      if(receivedSocket->flag == 1){// && tempAddr.port == tempSocket.src && tempSocket.state == LISTEN && tempAddr.addr == TOS_NODE_ID) {
-        // Update Socket State and Bind
-        tempSocket.flag = 2;
-        tempSocket.dest.port = receivedSocket->src;
-        tempSocket.dest.addr = myMsg->src;
-        tempSocket.state = SYN_RCVD;
-        //call Transport.bind(tempSocket.fd, tempSocket); // Change to setSocket/Update
-        call Transport.setSocket(tempSocket.fd, tempSocket);//update socketlist
-
-        //Make our SYN_ACK
-        //makePack(&SynAckPack, TOS_NODE_ID, myMsg->src, myMsg->TTL, PROTOCOL_TCP, myMsg->seq, &tempSocket, (uint8_t)sizeof(tempSocket));
-        SynAckPack.dest = myMsg->src;
-        SynAckPack.src = TOS_NODE_ID;
-        SynAckPack.seq = myMsg->seq + 1;
-        SynAckPack.TTL = myMsg->TTL;
-        SynAckPack.protocol = PROTOCOL_TCP;
-
-        //memcpy(dest, src, count)
-        memcpy(SynAckPack.payload, &tempSocket, (uint8_t)sizeof(tempSocket));
-
-        // Get Our Next Destination
-        for(j = 0; j < call Confirmed.size();j++){
-          dest = call Confirmed.get(j);
-          if (SynAckPack.dest == dest.node){
-            next = dest.nextHop;
-          }
-        }
-
-        /*
-        while (!Socketlist.isEmpty()){
-          stateSocket = call Socketlist.front();
-          if(stateSocket.fd == i) {
-            stateSocket.state = SYN_RCVD;
-            call localSocketList.pushfront(stateSocket);
-          }
-          else{
-            call localSocketList.pushfront(stateSocket);
-          }
-        }
-          while(!call localSocketList.isEmpty()){
-            call Socketlist.pushfront(call localSocketList.front());
-            call localSocketList.popfront();
-          }
-        */
-
-        dbg(TRANSPORT_CHANNEL,"SYN packet received from Node %d port %d, replying SYN_ACK.\n", myMsg->src, receivedSocket->src);
-
-          
-        call Sender.send(SynAckPack,next); 
-        return;
-        
-      }//end if
-      //}// End for
-
-      // Flag2: SYN_ACK packet
-      if(receivedSocket->flag == 2){
-        // Pack to reply to the SYN_ACK; Connection has been ESTABLISHED
-        pack AckPack;
-
-        //dbg(TRANSPORT_CHANNEL,"Received SYN_ACK.\n");
-        tempSocket = call Transport.getSocket(i);
-        //Update Socket State
-        tempSocket.flag = 3;
-        tempSocket.dest.port = receivedSocket->src;
-        tempSocket.dest.addr = myMsg->src;
-        tempSocket.state = ESTABLISHED;
-        call Transport.setSocket(tempSocket.fd, tempSocket);
-        //Make ACK packet
-        //makePack(&AckPack, TOS_NODE_ID, myMsg->src, myMsg->TTL, PROTOCOL_TCP, myMsg->seq, &tempSocket, (uint8_t)sizeof(tempSocket));
-        AckPack.dest = myMsg->src;
-        AckPack.src = TOS_NODE_ID;
-        AckPack.seq = myMsg->seq + 1;
-        AckPack.TTL = myMsg->TTL;
-        AckPack.protocol = PROTOCOL_TCP;
-
-        memcpy(AckPack.payload,&tempSocket, (uint8_t)sizeof(tempSocket));
-
-        dbg(TRANSPORT_CHANNEL,"SYN_ACK received, connection ESTABLISHED, replying with ACK.\n");
-
-        //call Sender.send(AckPack, call tableroute.get(tempSocket.dest.addr));     
-        // Get Our Next Destination
-        for(j = 0; j < call Confirmed.size();j++){
-          dest = call Confirmed.get(j);
-          if (AckPack.dest == dest.node){
-            next = dest.nextHop;
-          }
-        }  
-        call Sender.send(AckPack, next);
-        return;
-
-      } // End flag == 2
-     if(receivedSocket->flag == 3){
-        
-        tempSocket = call Transport.getSocket(i);
-        dbg(TRANSPORT_CHANNEL,"Received ACK 3-Way Handshake Complete.\n");
-        //if(tempSocket.src.port == SYN_RCVD){
-         // call Socketlist.pushfront(tempSocket);
-      // }
-        //update the state of the socket
-        tempSocket.state = ESTABLISHED;
-        call Transport.setSocket(tempSocket.fd, tempSocket);
-        return;
-
-      }// End flag == 3
-    }//end for
-  }// End TCPProtocol
 
 } // END END
 
