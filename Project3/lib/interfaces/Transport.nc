@@ -1,5 +1,5 @@
 #include "../../includes/packet.h"
-#include "../../includes/socket.h"
+
 
 /**
  * The Transport interface handles sockets and is a layer of abstraction
@@ -16,6 +16,9 @@
  */
 
 interface Transport{
+        // Added Functions
+    command socket_store_t getSocket(socket_t fd);
+    command error_t setSocket(socket_t fd, socket_store_t sck);
    /**
     * Get a socket if there is one available.
     * @Side Client/Server

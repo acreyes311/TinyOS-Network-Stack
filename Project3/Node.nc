@@ -953,7 +953,7 @@ void Dijkstra(){
         }
       }
     }
-    
+
     // Transfer to confirmed list
     if(call Confirmed.isEmpty()){
       for(i = 1; i <= 10; i++){
@@ -992,10 +992,11 @@ void Dijkstra(){
     receivedSocket = myMsg->payload;
     tempAddr = receivedSocket->dest;
 
+
     // ------------------ CHANGE TO SWITCH TO HANDLE 3-WAY HANDSHAKE ---------------
     //Find right socket
     for(i = 0; i < MAX_NUM_OF_SOCKETS; i++){
-      tempSocket = call Socketlist.get(i);
+      tempSocket = call Transport.getSocket(i);
       // Check for Port and Source; Listening; And Check Flag 1 for SYN.
       // If Found send a SYN_ACK
       if(receivedSocket->flag == 1){// && tempAddr.port == tempSocket.src && tempSocket.state == LISTEN && tempAddr.addr == TOS_NODE_ID) {
@@ -1003,8 +1004,9 @@ void Dijkstra(){
         tempSocket.flag = 2;
         tempSocket.dest.port = receivedSocket->src;
         tempSocket.dest.addr = myMsg->src;
-        //tempSocket.state = SYN_RCVD;
+        tempSocket.state = SYN_RCVD;
         //call Transport.bind(tempSocket.fd, tempSocket); // Change to setSocket/Update
+        call Transport.setSocket(tempSocket.fd, tempSocket);//update socketlist
 
         //Make our SYN_ACK
         //makePack(&SynAckPack, TOS_NODE_ID, myMsg->src, myMsg->TTL, PROTOCOL_TCP, myMsg->seq, &tempSocket, (uint8_t)sizeof(tempSocket));
@@ -1046,9 +1048,10 @@ void Dijkstra(){
 
           
         call Sender.send(SynAckPack,next); 
+        return;
         
       }//end if
-      }// End for
+      //}// End for
 
       // Flag2: SYN_ACK packet
       if(receivedSocket->flag == 2){
@@ -1056,13 +1059,13 @@ void Dijkstra(){
         pack AckPack;
 
         //dbg(TRANSPORT_CHANNEL,"Received SYN_ACK.\n");
-
+        tempSocket = call Transport.getSocket(i);
         //Update Socket State
         tempSocket.flag = 3;
         tempSocket.dest.port = receivedSocket->src;
         tempSocket.dest.addr = myMsg->src;
         tempSocket.state = ESTABLISHED;
-
+        call Transport.setSocket(tempSocket.fd, tempSocket);
         //Make ACK packet
         //makePack(&AckPack, TOS_NODE_ID, myMsg->src, myMsg->TTL, PROTOCOL_TCP, myMsg->seq, &tempSocket, (uint8_t)sizeof(tempSocket));
         AckPack.dest = myMsg->src;
@@ -1084,19 +1087,23 @@ void Dijkstra(){
           }
         }  
         call Sender.send(AckPack, next);
-
+        return;
 
       } // End flag == 2
      if(receivedSocket->flag == 3){
+        
+        tempSocket = call Transport.getSocket(i);
         dbg(TRANSPORT_CHANNEL,"Received ACK 3-Way Handshake Complete.\n");
-
-        tempSocket = call Socketlist.get(i);
-
+        //if(tempSocket.src.port == SYN_RCVD){
+         // call Socketlist.pushfront(tempSocket);
+      // }
         //update the state of the socket
         tempSocket.state = ESTABLISHED;
+        call Transport.setSocket(tempSocket.fd, tempSocket);
+        return;
 
       }// End flag == 3
-    //}//end for
+    }//end for
   }// End TCPProtocol
 
 } // END END

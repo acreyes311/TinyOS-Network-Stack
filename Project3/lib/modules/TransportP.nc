@@ -56,21 +56,19 @@ module TransportP{
 
 
 implementation {
-    /*
-    // Added Functions
-    socket_store_t getSocket(uint8_t destPort, uint8_t srcPort);
-    socket_store_t getServerSocket(uint8_t destPort);
+    
+
 
 
     //get function
-    socket_store_t getSocket(uint8_t destPort, uint8_t srcPort) {
+    command socket_store_t Transport.getSocket(socket_t fd) {
         socket_store_t temp;
         uint16_t i;
         uint16_t size = call SocketList.size();
 
-        for(i = 0; i < call SocketList.size();i++) {
+        for(i = 0; i < size;i++) {
             temp = call SocketList.get(i);
-            if(temp.dest.port == srcPort && temp.src.port == destPort){
+            if(fd == temp.fd){
                 return temp;
             }
         }
@@ -78,19 +76,23 @@ implementation {
     }// End getSocket
 
     // getServerSocket finds the listening socket then opens new socket to host the connection
-    socket_store_t getServerSocket(uint8_t destPort){
+    command error_t Transport.setSocket(socket_t fd, socket_store_t sck){
         socket_store_t temp;
         uint16_t i;
-        bool found;
+        //bool found;
 
         for (i = 0; i < call SocketList.size();i++){
             temp = call SocketList.get(i);
-            if(temp.src.port == destPort && temp.state == LISTEN){
-                return temp;
+            if(fd  == temp.fd){
+                temp = call SocketList.remove(i);
+                call SocketList.pushback(sck);
+                return SUCCESS;
             }
         }
+        //else
+        return FAIL;
     }// End getServerSocket
-*/
+
    /**
     * Get a socket if there is one available.
     * @Side Client/Server
@@ -254,7 +256,18 @@ implementation {
     *    from the pass buffer. This may be shorter then bufflen
     */
    command uint16_t Transport.read(socket_t fd, uint8_t *buff, uint16_t bufflen) {
+    int i;
+    socket_store_t temp;
 
+    //go through list and fid appropriate fd
+    for(i = 0; i < call SocketList.size(); i++){
+        temp = call SocketList.get(i);
+
+        if(fd == temp.fd){
+            temp = call SocketList.remove(i);
+        }
+
+    }
    }
 
    /**
