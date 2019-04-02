@@ -803,7 +803,7 @@ implementation{
         return;
 
       } // End flag == 2
-      
+
      if(receivedSocket->flag == 3){
         
         tempSocket = call Transport.getSocket(i);
@@ -822,8 +822,7 @@ implementation{
 
       }// End flag == 3
 
-      //if(receivedSocket->flag ==4){ 
-      }
+      //if(receivedSocket->flag ==4){ }
     }//end for
 
   }// End TCPProtocol
