@@ -1,29 +1,11 @@
-
-Implement transportC.nc and transportP.nc under lib/modules
- * The ones we need to work on for sure: socket, bind, listen, connect; maybe accept and close (maybe read)
- 3/26/19 - Did socket bind and accept. Not sure if they work. I guess we can test once everything is done? 
-           Still need listen connect and close.
-           
-* 3/28/19 - Need to work on the Timer (acceptTimer and writtenTimer(not sure about writtenTimer))
-            Need to fix error for the TCPProtocol (bind (fd, &addr))
+* 4/6/19 - Implement timers.
+         - Implement rest of the DATA, DATA_ACK flags and FIN, ACK_FIN Flags(Teardown?).
+         - Teardown(closeClient)
             
-* 3/29/10 - I think in the ones that Don't use the TCPpack.h the first flag is set in Transport.connect(),(they set the flag to 1)
-            and then the rest of the flags are set in that first (if flag ==1) block(in receive).
-            
-            Need to do Transport.connect()
-            Fix 3-way receive
-            
-* 3/30/19 - Aaaaaah. I dont know how to fix that problem.  Hard to test any of the new stuff without that working.
-            
-            Still Need to TCPProtocol flag = 4 and the rest of it?
-            Check that whatever we have in TransportP is correct.
-            
-* 3/31/10 - I think in order to finish mid-review we need to do Transport read(),write(), and close().
+* 3/31/19 - I think in order to finish mid-review we need to do Transport read(),write(), and close().
             And then the TCPProtocol function, where flag 4 = read, flag 5 = write and flag 6 = close (teardown)
             Ive been using mostly vancu,aye,foreman or brimo
             ** Need to change Dijkstra variable names **
-            
-* Setup and teardown
-*** Start of data transfer, using simplest to implement stop and wait protocol. 
+
 
 
