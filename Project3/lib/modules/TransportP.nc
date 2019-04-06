@@ -75,7 +75,7 @@ implementation {
 
     }// End getSocket
 
-    // getServerSocket finds the listening socket then opens new socket to host the connection
+    
     command error_t Transport.setSocket(socket_t fd, socket_store_t sck){
         socket_store_t temp;
         uint16_t i;
@@ -91,7 +91,7 @@ implementation {
         }
         //else
         return FAIL;
-    }// End getServerSocket
+    }// End setSocket
 
    /**
     * Get a socket if there is one available.
@@ -236,13 +236,8 @@ implementation {
     * @return uint16_t - return SUCCESS if you are able to handle this
     *    packet or FAIL if there are errors.
     */
-   command error_t Transport.receive(pack* package) {     
-        if(package->protocol ==PROTOCOL_TCP){
-            return SUCCESS;
-        }
-        else{
-            return FAIL;
-        }
+   command error_t Transport.receive(pack* package) {
+
    }
 
    /**
@@ -260,9 +255,18 @@ implementation {
     * @return uint16_t - return the amount of data you are able to read
     *    from the pass buffer. This may be shorter then bufflen
     */
+    // *JF
+    // Want to write to Clients buffer with data passed in to servers rcvdBuff[SOCKET_BUFFER_SIZE]
+    // Then make packet andd send ACKs for each time it receives data.
+    // Ask client to send more data
+    // Return how much data the server was able to read from buffsent from Client sendBuff(written to Servers rcvdBuff)
    command uint16_t Transport.read(socket_t fd, uint8_t *buff, uint16_t bufflen) {
-    int i;
+    int i,j,len;
+    int avail;  // space remaining
     socket_store_t temp;
+
+
+    dbg(TRANSPORT_CHANNEL,"In Transport.read().\n");
 
     //go through list and fid appropriate fd
     for(i = 0; i < call SocketList.size(); i++){
@@ -270,10 +274,38 @@ implementation {
 
         if(fd == temp.fd){
             temp = call SocketList.remove(i);
-        }
 
+            // Start at last written 
+            len = temp.lastRead + 1;
+
+            avail = SOCKET_BUFFER_SIZE - len;
+
+            for(j = 0; j < bufflen; j++){
+
+                temp.sendBuff[len] = buff[j];
+                len++;
+                avail--;
+
+                // If no more spave available stop reading.
+                if(avail == 0)
+                    break;
+            }// end inner for j
+
+            temp.lastRead = len;
+
+            // Insert back into SocketList
+            call SocketList.pushback(temp);
+
+            dbg(TRANSPORT_CHANNEL,"Data read to socket %d\n",fd);
+
+            // This amount of data read
+            return j;
+        }
     }
-   }
+    return 0;   // Failed
+
+   } // End of READ
+
 
    /**
     * Attempts a connection to an address.
