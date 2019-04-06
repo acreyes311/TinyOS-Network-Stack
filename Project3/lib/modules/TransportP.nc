@@ -224,9 +224,85 @@ implementation {
     * @return uint16_t - return the amount of data you are able to write
     *    from the pass buffer. This may be shorter then bufflen
     */
+    //Client Side:
+    //Write Clients buffer content that was passed in sendBuff[SOCKET_BUFFER_SIZE]
+    //Then make a packet an send ACKs for each time it receives data.
+    //Asks client to send more data
+    //Return how much data the server was able to read from buff, send from Client sendBuff(written to Servers rcvdBuff).
    command uint16_t Transport.write(socket_t fd, uint8_t *buff, uint16_t bufflen) {
+    socket_store_t temp;
+    int i,j,lw;
+    int avail;
+    uint16_t nextHop;
+    LinkState ls;
+    // will write to this packet
+    pack Data;
 
-   }
+    //Iterate through list and find appropriate fd
+    for(i = 0; i < call SocketList.size(); i++){
+        temp = call SocketList.get(i);
+
+        if(fd == temp.fd){
+            temp = call SocketList.remove(i);
+
+            //start at last Written part of buffer
+            lw = temp.lastWritten + 1;
+
+            // calculate spae
+            avail = SOCKET_BUFFER_SIZE - lw;
+
+            dbg(TRANSPORT_CHANNEL,"Node %d writing on socket.\n",TOS_NODE_ID);
+
+            //Write to buffer
+            for(j = 0; j < bufflen; j++){
+                temp.sendBuff[lw] = buff[j];
+                lw++;
+                avail--;
+
+                //if no more available space break
+                if(avail == 0)
+                    break;
+
+            }// End inner for J
+
+            temp.lastWritten = lw;
+            temp.flag = 4;
+
+            dbg(TRANSPORT_CHANNEL, "Data written on Socket %d\n",fd);
+
+            //Initialize DATA packet
+            Data.src = TOS_NODE_ID;
+            Data.dest = temp.dest.addr;
+            Data.protocol = PROTOCOL_TCP;
+            Data.TTL = MAX_TTL;
+
+            // copy temp into Data packet payload
+            memcpy(Data.payload, &temp, (uint8_t)sizeof(temp));
+
+    
+            //Get next hop
+            for(j = 0; j < call ConfirmedList.size(); i++){
+                ls = call ConfirmedList.get(i);
+                if(ls.node == Data.dest)
+                    nextHop = ls.nextHop;
+            } // End net hop For loop
+
+            dbg(TRANSPORT_CHANNEL, "Data pack sent out Node %d.\n", Data.dest);
+
+            //Send Pack
+            call Sender.send(Data,2);
+
+            //Reinsert socket back in SocketList
+            call SocketList.pushback(temp);
+
+            //Return amount able to write on buffer
+            return j;
+        }// End If fd check
+    }// End for loop that iterates through list
+
+    return 0;   // Failed to write
+    
+   } // End of WRITE()
 
    /**
     * This will pass the packet so you can handle it internally. 
@@ -255,12 +331,14 @@ implementation {
     * @return uint16_t - return the amount of data you are able to read
     *    from the pass buffer. This may be shorter then bufflen
     */
-    // *JF
+
+    // Server Side:
     // Want to write to Clients buffer with data passed in to servers rcvdBuff[SOCKET_BUFFER_SIZE]
     // Then make packet andd send ACKs for each time it receives data.
     // Ask client to send more data
     // Return how much data the server was able to read from buffsent from Client sendBuff(written to Servers rcvdBuff)
    command uint16_t Transport.read(socket_t fd, uint8_t *buff, uint16_t bufflen) {
+        // *JF
     int i,j,len;
     int avail;  // space remaining
     socket_store_t temp;
