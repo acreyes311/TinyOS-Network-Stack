@@ -283,7 +283,7 @@ implementation {
             //Get next hop
             for(j = 0; j < call ConfirmedList.size(); i++){
                 ls = call ConfirmedList.get(i);
-                if(ls.node == Data.dest)
+                if(ls.node == Data.dest) 
                     nextHop = ls.nextHop;
             } // End net hop For loop
 

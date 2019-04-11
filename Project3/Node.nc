@@ -93,6 +93,7 @@ implementation{
    socket_t fd; // Global fd/socket
    uint32_t TimeReceived; 
    uint32_t TimeSent;
+   uint16_t globalTransfer;
 
    // Prototypes
    bool isKnown(pack *p);  // already seen function
@@ -106,7 +107,7 @@ implementation{
    //void Dijkstra(uint8_t Destination, uint8_t Cost, uint8_t NextHop);
    void printLSP();
    // ---------Project 3 -----------//
-   void TCPProtocol(pack *myMsg);
+   void TCPProtocol(pack *myMsg); 
    
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
@@ -198,6 +199,8 @@ implementation{
        //if(lspCount > 1 && lspCount % 20 == 0 && lspCount < 61)
           Dijkstra();                          
    }
+
+   
 //based on Psuedocode
    //timer fired
     //  int newFd = accept();
@@ -206,46 +209,65 @@ implementation{
     //  for all socket added
     //    read data and print
     
+    //Returns the amount of data able to read from pass buffer
     event void acceptTimer.fired() {
-      /*
-          int i,size,length;
-          socket_t newfd;
-          fd = call Transport.accept(fd);
-          size =call Socketlist.size();
-          if(fd != (socket_t)NULL)
-          {
-            //if the socketsize is smaller than total socket size, then sockets are saved
-            //else  size then print"socket is full"
-            if(size < 10){
-              dbg(GENERAL_CHANNEL, "Saved new FD", fd);
-              call Socketlist.pushback(fd);
-            }
-            else{
-                 dbg(GENERAL_CHANNEL, "Socket is FULL");
-            }
-            //read data and print
-               //newfd = call Socketlist.get(fd);
-            for(i=0; i<size; i++){
-              newfd = call Socketlist.get(i);
-              //length = call Transport.read(fd,buff, bufflen);
-              //maybe need to implement read in TransportP.nc
-            }
-          }
-          else{
-            dbg(GENERAL_CHANNEL, "new Fd is NULL");
-          }
-          */
-    }
-    
+      socket_store_t temp;
+      uint8_t i, ind,avail;      
+      bool found = FALSE;
+
+      dbg(TRANSPORT_CHANNEL, "acceptTimer Fired!\n");
+
+      fd = call Transport.accept(fd);
+
+      for(i = 0; i < call Socketlist.size(); i++){
+        temp = call Socketlist.get(i);
+
+        if(temp.fd == fd && !found){
+          found = TRUE;
+          ind = i;
+        }// end if
+      }//end for
+
+      if(found){
+        temp = call Socketlist.get(ind);
+        avail = call Transport.read(temp.fd,0,temp.lastWritten);
+        dbg(TRANSPORT_CHANNEL,"Read Amount avail %d\n",avail);
+      }// End if
+    }// End acceptTimer()
+
+
     //based on Psuedocode
     //timer fired
     //  if all data has been written on the buffer empty
     //    create new data for the buffer
     //    //data is from 0 to [transfer]
     //subtract the amount of data you were able to write(fd, buffer, buffer len)
-    event void writtenTimer.fired() {
 
-    }
+    //Returns amount of data able to write from the pass buffer
+    event void writtenTimer.fired() {
+      socket_store_t temp;
+      uint8_t i, avail, ind;
+      bool found = FALSE;
+
+      dbg(TRANSPORT_CHANNEL,"writtenTimer Fired!\n");
+
+      for(i = 0; i < call Socketlist.size(); i++){
+        temp = call Socketlist.get(i);
+        if(temp.fd == fd && !found){
+          found = TRUE;
+          ind = i;
+        }//end if
+      }//end for
+
+      if(found){
+        temp = call Socketlist.get(ind);
+        while(globalTransfer > 0){
+          avail = call Transport.write(fd,0,globalTransfer);
+          globalTransfer = globalTransfer - avail;  // Is this done in write()?
+          dbg(TRANSPORT_CHANNEL,"written Amount avail %d and globalTransfer %d\n",avail,globalTransfer);
+        }//end while
+      }//end if
+    }// END writtenTimer()
   
 
    event void AMControl.startDone(error_t err){
@@ -598,11 +620,9 @@ implementation{
 
    /* ----- Set Test Server -----
     * Initiates server at node[address] and binds it to [port]
-    * Listens for connections
+    * Then Listens for connections
     * If accepted a new socket is made for that connection and server continues to listen
    */
-
-
    event void CommandHandler.setTestServer(uint16_t port){
     socket_addr_t address;
     //socket_t fd;  // global fd up top
@@ -614,8 +634,10 @@ implementation{
 
     fd = call Transport.socket();
 
-    if(call Transport.bind(fd, &address) == SUCCESS && call Transport.listen(fd) == SUCCESS)
+    if(call Transport.bind(fd, &address) == SUCCESS && call Transport.listen(fd) == SUCCESS){
       dbg(TRANSPORT_CHANNEL, "Socket %d is Listening.\n", fd);
+      call acceptTimer.startOneShot(30000);
+    }
     else
       dbg(TRANSPORT_CHANNEL, "Unable to set socket %d.\n", fd);
 
@@ -648,7 +670,7 @@ implementation{
 
       //TimeSent = call LocalTime.getNow();
     if(call Transport.connect(fd,&serverAdr) == SUCCESS){
-      //call WriteTimer();
+      call writtenTimer.startOneShot(60000);
       dbg(TRANSPORT_CHANNEL,"Transport.connect SUCCESS\n");
     }
   }
