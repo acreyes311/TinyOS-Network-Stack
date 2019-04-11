@@ -844,7 +844,47 @@ implementation{
 
       }// End flag == 3
 
-      //if(receivedSocket->flag ==4){ }
+      if(receivedSocket->flag == 4){ 
+        //Data received, now read it
+        //DATA_ACK packet to acknowledge to other node that data has been received
+        pack DATA_ACK;
+        //Length of buffer same as value of lastWritten index in buffer
+        uint16_t bufferLength;
+        //bufferLength = myMsg->seq;
+
+        //Read the buffer from the DATA packet.
+        call Transport.read(receivedSocket->fd,receivedSocket->sendBuff, bufferLength);
+        dbg(TRANSPORT_CHANNEL,"Finished flag4.read().\n");
+
+        //Get current state of socket
+        tempSocket = call Transport.getSocket(i);
+
+        //update state of socket
+        tempSocket.flag = 5;
+        tempSocket.nextExpected = bufferLength + 1;
+
+        call Transport.setSocket(tempSocket.fd, tempSocket);
+
+        //Make DATA_ACK PACK
+        DATA_ACK.dest = myMsg->src;
+        DATA_ACK.src = TOS_NODE_ID;
+        DATA_ACK.seq = myMsg->seq+1;
+        DATA_ACK.TTL = myMsg->TTL;
+        DATA_ACK.protocol = PROTOCOL_TCP;
+
+        memcpy(DATA_ACK.payload, &tempSocket,(uint8_t)sizeof(tempSocket));
+
+        dbg(TRANSPORT_CHANNEL,"DATA has been received and sending out DATA_ACK.\n");
+
+        for(j = 0; j < call Confirmed.size();j++){
+          dest = call Confirmed.get(j);
+          if (DATA_ACK.dest == dest.node){
+            next = dest.nextHop;
+          }
+        }//end j for  
+        call Sender.send(DATA_ACK, next);
+
+      }// end flag == 4
     }//end for
 
   }// End TCPProtocol
