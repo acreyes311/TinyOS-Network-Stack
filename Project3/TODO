@@ -1,3 +1,6 @@
+* 4/11/19 - Changed the timers but not working properly.  transport.accept() returns NULL.
+            The read/write loops in Timers dont work.
+
 * 4/6/19 - Implement timers.
          - Implement rest of the DATA, DATA_ACK flags and FIN, ACK_FIN Flags(Teardown?).
          - Teardown(closeClient)
