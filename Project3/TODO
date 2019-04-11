@@ -1,5 +1,12 @@
 * 4/11/19 - Changed the timers but not working properly.  transport.accept() returns NULL.
             The read/write loops in Timers dont work.
+            
+           - Update
+             Added flag = 4. 
+                        ayeh/projtest calls readtimer in flag =3 and writeTimer in flag = 2
+                        ayeh/160proj calls read in flag = 4 and write in flag = 5 ( No timers) Try this way?
+                        forman write() flag = 3 and read() flag = 4.
+           - Need to find where do they Print the data.
 
 * 4/6/19 - Implement timers.
          - Implement rest of the DATA, DATA_ACK flags and FIN, ACK_FIN Flags(Teardown?).
