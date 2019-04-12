@@ -827,6 +827,7 @@ implementation{
       } // End flag == 2
 
      if(receivedSocket->flag == 3){
+        uint8_t buff[1];
         
         tempSocket = call Transport.getSocket(i);
         dbg(TRANSPORT_CHANNEL,"Received ACK 3-Way Handshake Complete.\n");
@@ -834,7 +835,9 @@ implementation{
       if(tempSocket.state == SYN_RCVD){
           call Socketlist.pushfront(tempSocket);
       }
+      buff[0] = 1;
         //call Transport.
+        call Transport.write(tempSocket.fd, buff,1);
 
         //update the state of the socket
         tempSocket.state = ESTABLISHED;
@@ -844,6 +847,7 @@ implementation{
 
       }// End flag == 3
 
+      // Flag = 4 DATA packet
       if(receivedSocket->flag == 4){ 
         //Data received, now read it
         //DATA_ACK packet to acknowledge to other node that data has been received
@@ -883,8 +887,14 @@ implementation{
           }
         }//end j for  
         call Sender.send(DATA_ACK, next);
-
+        return;
       }// end flag == 4
+
+      // FLAG = 5 DATA_ACK
+      if(receivedSocket->flag == 5){
+        dbg(TRANSPORT_CHANNEL,"DATA_ACK received, DATA reached destination.\n");
+        return;
+      }//end flag == 5
     }//end for
 
   }// End TCPProtocol
