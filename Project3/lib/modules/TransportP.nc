@@ -278,11 +278,11 @@ implementation {
 
             // copy temp into Data packet payload
             memcpy(Data.payload, &temp, (uint8_t)sizeof(temp));
-
+            //dbg(TRANSPORT_CHANNEL,"MEMCOPIED WRITE\n");
     
             //Get next hop
-            for(j = 0; j < call ConfirmedList.size(); i++){
-                ls = call ConfirmedList.get(i);
+            for(j = 0; j < call ConfirmedList.size(); j++){
+                ls = call ConfirmedList.get(j);
                 if(ls.node == Data.dest) 
                     nextHop = ls.nextHop;
             } // End net hop For loop
@@ -290,7 +290,8 @@ implementation {
             dbg(TRANSPORT_CHANNEL, "Data pack sent out Node %d.\n", Data.dest);
 
             //Send Pack
-            call Sender.send(Data,2);
+            call Sender.send(Data,nextHop);
+            //call Sender.send(Data,1);
 
             //Reinsert socket back in SocketList
             call SocketList.pushback(temp);
