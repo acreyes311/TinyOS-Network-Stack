@@ -636,7 +636,7 @@ implementation{
 
     if(call Transport.bind(fd, &address) == SUCCESS && call Transport.listen(fd) == SUCCESS){
       dbg(TRANSPORT_CHANNEL, "Socket %d is Listening.\n", fd);
-      call acceptTimer.startOneShot(30000);
+      //call acceptTimer.startOneShot(30000);
     }
     else
       dbg(TRANSPORT_CHANNEL, "Unable to set socket %d.\n", fd);
@@ -670,7 +670,7 @@ implementation{
 
       //TimeSent = call LocalTime.getNow();
     if(call Transport.connect(fd,&serverAdr) == SUCCESS){
-      call writtenTimer.startOneShot(60000);
+      //call writtenTimer.startOneShot(15000);
       dbg(TRANSPORT_CHANNEL,"Transport.connect SUCCESS\n");
     }
   }
@@ -685,7 +685,7 @@ implementation{
    // Terminate Connection.
    // find fd associated with [clieant address],[srcPort],[destPort],[dest];
    //     close(fd)
-   /*
+   
    event void CommandHandler.ClientClose(uint8_t clientAddr, uint8_t srcPort, uint8_t destPort, uint8_t dest)  {
     int i;
     socket_store_t socket;
@@ -693,7 +693,7 @@ implementation{
 
     call Transport.close(fd);
    }
-  */
+  
 
    event void CommandHandler.setAppServer(){}
 
@@ -853,13 +853,18 @@ implementation{
         //DATA_ACK packet to acknowledge to other node that data has been received
         pack DATA_ACK;
         //Length of buffer same as value of lastWritten index in buffer
-        uint16_t bufferLength;
-        //bufferLength = myMsg->seq;
+        uint16_t bufferLength = 8;
+        //uint16_t bufferLength = myMsg->seq;
 
         //Read the buffer from the DATA packet.
+        //bufferLength = call Transport.read(receivedSocket->fd,receivedSocket->sendBuff, bufferLength);
         call Transport.read(receivedSocket->fd,receivedSocket->sendBuff, bufferLength);
         dbg(TRANSPORT_CHANNEL,"Finished flag4.read().\n");
 
+        for(j = 0; j< bufferLength; j++){
+          printf("%d ",receivedSocket->sendBuff[j]);          
+        }
+        printf("\n");
         //Get current state of socket
         tempSocket = call Transport.getSocket(i);
 
