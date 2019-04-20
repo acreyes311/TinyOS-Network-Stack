@@ -87,6 +87,9 @@ implementation {
     components new ListC(socket_store_t, 10) as SocketlistC;
     Node.Socketlist -> SocketlistC;
 
+    components new ListC(socket_store_t, 10) as modSocketsC;
+    Node.modSockets -> modSocketsC;
+
     // Connect to Transport
     //components TransportC
     Node.Transport->TransportC;
