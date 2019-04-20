@@ -95,5 +95,8 @@ implementation {
     Node.Transport->TransportC;
     TransportC.ConfirmedC->ConfirmedC;
 
+    components LocalTimeMilliC;
+    Node.LocalTime -> LocalTimeMilliC;
+
 
 }

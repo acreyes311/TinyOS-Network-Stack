@@ -81,7 +81,7 @@ module Node{
    // ----- Project 3 ------
    uses interface List<socket_store_t> as Socketlist;
    uses interface List<socket_store_t> as modSockets;
-
+   uses interface LocalTime<TMilli>; // Aquire local time of machine
 }
 
 
@@ -95,6 +95,7 @@ implementation{
    uint32_t TimeReceived; 
    uint32_t TimeSent;
    uint16_t globalTransfer;
+   uint32_t estimateRTT;
 
    // Prototypes
    bool isKnown(pack *p);  // already seen function
@@ -652,7 +653,7 @@ implementation{
    event void CommandHandler.setTestClient(uint16_t dest, uint16_t srcPort, uint16_t destPort, uint16_t transfer){
     socket_addr_t address;  // socket address
     socket_addr_t socketAdr,serverAdr;  // server address
-
+    globalTransfer = transfer;
     dbg(TRANSPORT_CHANNEL, "Inside setTestClient -- Testing Client.\n");
 
     // Get Socket fd
@@ -669,6 +670,7 @@ implementation{
       serverAdr.addr = dest;
       serverAdr.port = destPort;
 
+    TimeSent = call LocalTime.get();  
       //TimeSent = call LocalTime.getNow();
     if(call Transport.connect(fd,&serverAdr) == SUCCESS){
       //call writtenTimer.startOneShot(15000);
@@ -809,22 +811,23 @@ implementation{
           }
         }
 
-        /*
-        while (!Socketlist.isEmpty()){
-          stateSocket = call Socketlist.front();
-          if(stateSocket.fd == i) {
-            stateSocket.state = SYN_RCVD;
-            call localSocketList.pushfront(stateSocket);
-          }
-          else{
-            call localSocketList.pushfront(stateSocket);
-          }
+        while(!call Socketlist.isEmpty()){
+          tempSocket = call Socketlist.front();
+          call Socketlist.popfront();
+
+          if(tempSocket.fd == i){
+            tempSocket.state = SYN_RCVD;
+            call modSockets.pushfront(tempSocket);
+          }//end if
+          else {
+            call modSockets.pushfront(tempSocket);
+          }//end else
+        }// end While
+        
+        while(!call modSockets.isEmpty()){
+          call Socketlist.pushfront(call modSockets.front());
+          call modSockets.popfront();
         }
-          while(!call localSocketList.isEmpty()){
-            call Socketlist.pushfront(call localSocketList.front());
-            call localSocketList.popfront();
-          }
-        */
 
         dbg(TRANSPORT_CHANNEL,"SYN packet received from Node %d port %d, replying SYN_ACK.\n", myMsg->src, receivedSocket->src);
 
@@ -839,8 +842,11 @@ implementation{
       if(receivedSocket->flag == 2){
         // Pack to reply to the SYN_ACK; Connection has been ESTABLISHED
         pack AckPack;
+        //Timereceivevd
+        TimeReceived = call LocalTime.get();
+        estimateRTT = TimeReceived - TimeSent;
 
-        //dbg(TRANSPORT_CHANNEL,"Received SYN_ACK.\n");
+        dbg(TRANSPORT_CHANNEL,"Received SYN_ACK at time %d.\n",estimateRTT);
         tempSocket = call Transport.getSocket(i);
         //Update Socket State
         tempSocket.flag = 3;
@@ -868,12 +874,53 @@ implementation{
             next = dest.nextHop;
           }
         }  
+
+        while(!call Socketlist.isEmpty()){
+          tempSocket = call Socketlist.front();
+          call Socketlist.popfront();
+
+          if(tempSocket.fd == i){
+            tempSocket.state = ESTABLISHED;
+            call modSockets.pushfront(tempSocket);
+          }//end if
+          else {
+            call modSockets.pushfront(tempSocket);
+          }//end else
+        }// end While
+        
+        while(!call modSockets.isEmpty()){
+          call Socketlist.pushfront(call modSockets.front());
+          call modSockets.popfront();
+        }
+        //call writtenTimer.startPeriodic(25000);
+
         call Sender.send(AckPack, next);
         return;
 
       } // End flag == 2
 
      if(receivedSocket->flag == 3){
+
+      dbg(TRANSPORT_CHANNEL,"Received ACK 3-Way Handshake Complete.\n");
+
+        while(!call Socketlist.isEmpty()){
+          tempSocket = call Socketlist.front();
+          call Socketlist.popfront();
+
+          if(tempSocket.fd == i){
+            tempSocket.state = ESTABLISHED;
+            call modSockets.pushfront(tempSocket);
+          }//end if
+          else {
+            call modSockets.pushfront(tempSocket);
+          }//end else
+        }// end While
+        
+        while(!call modSockets.isEmpty()){
+          call Socketlist.pushfront(call modSockets.front());
+          call modSockets.popfront();
+        }
+      /*
         uint8_t buff[1];
         
         tempSocket = call Transport.getSocket(i);
@@ -889,7 +936,7 @@ implementation{
         //update the state of the socket
         tempSocket.state = ESTABLISHED;
         call Transport.setSocket(tempSocket.fd, tempSocket);
-
+*/
         return;
 
       }// End flag == 3
@@ -938,6 +985,25 @@ implementation{
             next = dest.nextHop;
           }
         }//end j for  
+
+        while(!call Socketlist.isEmpty()){
+          tempSocket = call Socketlist.front();
+          call Socketlist.popfront();
+
+          if(tempSocket.fd == i){
+            tempSocket.lastAck = bufferLength + 1;
+            call modSockets.pushfront(tempSocket);
+          }//end if
+          else {
+            call modSockets.pushfront(tempSocket);
+          }//end else
+        }// end While
+        
+        while(!call modSockets.isEmpty()){
+          call Socketlist.pushfront(call modSockets.front());
+          call modSockets.popfront();
+        }
+
         call Sender.send(DATA_ACK, next);
         return;
       }// end flag == 4
@@ -950,10 +1016,13 @@ implementation{
 
       //flag = 6 receive Fin pack and close
       if(receivedSocket->flag == 6){
+
         dbg(TRANSPORT_CHANNEL,"FIN received.\n");
+
         while(!call Socketlist.isEmpty()){
           tempSocket = call Socketlist.front();
           call Socketlist.popfront();
+
           if(tempSocket.fd == i){
             tempSocket.state = CLOSED;
             call modSockets.pushfront(tempSocket);
@@ -962,6 +1031,7 @@ implementation{
             call modSockets.pushfront(tempSocket);
           }//end else
         }// end While
+
         while(!call modSockets.isEmpty()){
           call Socketlist.pushfront(call modSockets.front());
           call modSockets.popfront();
