@@ -587,7 +587,7 @@ implementation {
 
         if(temp.fd == fd) {
             temp = call SocketList.remove(i);
-            temp.state == LISTEN;
+            temp.state = LISTEN; //fixed something
             call SocketList.pushback(temp);
 
             dbg(TRANSPORT_CHANNEL, "Socket %d has been set to listen.\n", fd);
