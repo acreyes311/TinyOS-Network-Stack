@@ -96,7 +96,7 @@ implementation{
    uint32_t TimeSent;
    uint16_t globalTransfer = 0;
    uint32_t estimateRTT;
-
+   uint16_t maxTransfer;
    // Prototypes
    bool isKnown(pack *p);  // already seen function
    void insertPack(pack p); // push into list
@@ -656,6 +656,8 @@ implementation{
     socket_addr_t address;  // socket address
     socket_addr_t socketAdr,serverAdr;  // server address
     globalTransfer = transfer+1;
+    maxTransfer = transfer + 1;
+
     dbg(TRANSPORT_CHANNEL, "Inside setTestClient -- Testing Client. Initial GLOBALTRANSFER %d\n",globalTransfer);
 
     // Get Socket fd
@@ -664,6 +666,13 @@ implementation{
     // Source and source port
     socketAdr.addr = TOS_NODE_ID;
     socketAdr.port = srcPort;
+
+    if(maxTransfer > 127){
+      maxTransfer = maxTransfer - 128;
+      globalTransfer = 128;
+    }
+    else
+      maxTransfer = 0;
 
     //Bind Client socket to Socket Adddress
     if(call Transport.bind(fd, &socketAdr) == SUCCESS) {
@@ -690,33 +699,71 @@ implementation{
    // Terminate Connection.
    // find fd associated with [clieant address],[srcPort],[destPort],[dest];
    //     close(fd)
-   /*
-   event void CommandHandler.ClientClose(uint8_t clientAddr, uint8_t srcPort, uint8_t destPort, uint8_t dest)  {
-    int i;
-    socket_store_t socket;
-    socket_t fd;
+   
+   // event void CommandHandler.ClientClose(uint8_t clientAddr, uint8_t srcPort, uint8_t destPort, uint8_t dest)  {
+   //  socket_store_t temp,temp2;
+   //  pack Fin;
+   //  socket_addr_t client_address, server_address;
+   //  int i;
+   //  uint8_t next; 
+   //  LinkState ls;
+   //  bool flag;
 
-    call Transport.close(fd);
-   }
-  */
+   //  for(i = 0; i < call Socketlist.size(); i++){
+   //    temp = call Socketlist.get(i);
+   //    server_address = temp.dest;
+
+   //    if(temp.src == srcPort && server_address.port == destPort && server_address.addr == dest){
+   //      flag = FALSE;
+   //      call Transport.close(temp.fd);
+
+   //      temp.flag = 6;
+   //      //Make pack
+   //      Fin.dest = dest;
+   //      Fin.src = TOS_NODE_ID;
+   //      Fin.seq = 1;
+   //      Fin.TTL = MAX_TTL;
+   //      Fin.protocol = PROTOCOL_TCP;
+   //      memcpy(Fin.payload, &temp,(uint8_t)sizeof(temp));
+
+   //      for(i = 0; i < call Confirmed.size();i++) {
+   //        ls = call Confirmed.get(i);
+
+   //        if(ls.node == dest) {
+   //          next = ls.nextHop;
+   //          flag = TRUE;
+   //          break;
+   //        }//end inner if
+   //      }//end inner for
+      
+   //      if(flag)
+   //        call Sender.send(Fin,next);
+   //      else
+   //        dbg(TRANSPORT_CHANNEL,"Error making Fin pack\n");
+   //    }// end if
+   //  }
+   // }
+  
+  
   event void CommandHandler.ClientClose(uint8_t clientAddr, uint8_t srcPort, uint8_t destPort, uint8_t dest)  {
     pack Fin;
     socket_store_t temp, temp2;
     uint16_t i, next;
-    LinkState destination;
+    LinkState ls;
 
     // Make FIN pack
     Fin.dest = dest;
     Fin.src = TOS_NODE_ID;
     Fin.seq = 1;
     Fin.TTL = MAX_TTL;
+    Fin.protocol = PROTOCOL_TCP;
 
     //Get and Update Socket to CLOSED
     temp = call Socketlist.get(fd);
     temp.state = CLOSED;
     temp.flag = 6;
-    temp.dest.port = destPort;
-    temp.dest.addr = dest;
+    temp.dest.port = dest;
+    temp.dest.addr = destPort;
 
     while(!call Socketlist.isEmpty()){
       temp2 = call Socketlist.front();
@@ -726,7 +773,8 @@ implementation{
       else{
         call modSockets.pushfront(temp2);
       }
-      }// End While
+      call Socketlist.popfront();
+    }// End While
 
       while(!call modSockets.isEmpty()){
         call Socketlist.pushfront(call modSockets.front());
@@ -734,9 +782,9 @@ implementation{
       }
 
       for(i = 0; i <call Confirmed.size(); i++){
-        destination = call Confirmed.get(i);
-        if(Fin.dest == destination.nextHop){
-          next = destination.nextHop;
+        ls = call Confirmed.get(i);
+        if(Fin.dest == ls.nextHop){
+          next = ls.nextHop;
         }
       }
       dbg(TRANSPORT_CHANNEL,"Sending FIN packet to %d\n",next);
@@ -981,6 +1029,8 @@ implementation{
         //update state of socket
         tempSocket.flag = 5;
         tempSocket.nextExpected = bufferLength + 1;
+        tempSocket.dest.port = receivedSocket->src;
+        tempSocket.dest.addr = myMsg->src;
 
         call Transport.setSocket(tempSocket.fd, tempSocket);
 
@@ -1026,36 +1076,57 @@ implementation{
 
       // FLAG = 5 DATA_ACK
       if(receivedSocket->flag == 5){
+        uint16_t sz;
+        uint8_t arr[maxTransfer];
+
         dbg(TRANSPORT_CHANNEL,"DATA_ACK received, DATA reached destination.\n");
+        if(globalTransfer > 0){
+          sz = call Transport.write(tempSocket.fd, 0,0);
+          globalTransfer = globalTransfer - sz;
+        }
+        else if(globalTransfer <= 0 && maxTransfer > 0){
+          globalTransfer = maxTransfer;
+          maxTransfer = 0;
+          for( i = 0; i < globalTransfer; i++){
+            arr[i] = i + 128;
+            printf("Print in flag 5: %d\n",arr[i]);
+          }
+          sz = call Transport.write(tempSocket.fd,arr,globalTransfer);
+          globalTransfer = globalTransfer - sz;
+        }
         return;
       }//end flag == 5
 
       //flag = 6 receive Fin pack and close
       if(receivedSocket->flag == 6){
 
-        dbg(TRANSPORT_CHANNEL,"FIN received.\n");
+        dbg(TRANSPORT_CHANNEL,"FIN received Closing Socket.\n");
+        if(call Transport.close(receivedSocket->fd) == SUCCESS)
+          dbg(TRANSPORT_CHANNEL,"Successfully closed socket.\n");
+        else
+          dbg(TRANSPORT_CHANNEL,"Couldn't Close Socket.\n");
 
-        while(!call Socketlist.isEmpty()){
-          tempSocket = call Socketlist.front();
-          call Socketlist.popfront();
+        // while(!call Socketlist.isEmpty()){
+        //   tempSocket = call Socketlist.front();
+        //   call Socketlist.popfront();
 
-          if(tempSocket.fd == i){
-            tempSocket.state = CLOSED;
-            call modSockets.pushfront(tempSocket);
-          }//end if
-          else {
-            call modSockets.pushfront(tempSocket);
-          }//end else
-        }// end While
+        //   if(tempSocket.fd == i){
+        //     tempSocket.state = CLOSED;
+        //     call modSockets.pushfront(tempSocket);
+        //   }//end if
+        //   else {
+        //     call modSockets.pushfront(tempSocket);
+        //   }//end else
+        // }// end While
 
-        while(!call modSockets.isEmpty()){
-          call Socketlist.pushfront(call modSockets.front());
-          call modSockets.popfront();
-        }
+        // while(!call modSockets.isEmpty()){
+        //   call Socketlist.pushfront(call modSockets.front());
+        //   call modSockets.popfront();
+        // }
         return;
       }//end flag = 6
     }//end for
-
+    return;
   }// End TCPProtocol
 
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint8_t length){
