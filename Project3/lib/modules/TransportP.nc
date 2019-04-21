@@ -473,7 +473,7 @@ implementation {
         //PRINT OUT DATA
         for(i = 0; i < temp.lastRcvd; i++){
             if(temp.rcvdBuff[i] != 255 && temp.rcvdBuff[i] != 0){
-                dbg(TRANSPORT_CHANNEL,"Read:%d \n",i,temp.rcvdBuff[i]);
+                dbg(TRANSPORT_CHANNEL,"Read index:[%d]: %d \n",i,temp.rcvdBuff[i]);
                 temp.rcvdBuff[i] = 255;
                 temp.effectiveWindow++;
                 read++;
