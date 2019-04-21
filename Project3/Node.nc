@@ -94,7 +94,7 @@ implementation{
    socket_t fd; // Global fd/socket
    uint32_t TimeReceived; 
    uint32_t TimeSent;
-   uint16_t globalTransfer;
+   uint16_t globalTransfer = 0;
    uint32_t estimateRTT;
 
    // Prototypes
@@ -235,6 +235,8 @@ implementation{
         avail = call Transport.read(temp.fd,0,temp.lastWritten);
         dbg(TRANSPORT_CHANNEL,"Read Amount avail %d\n",avail);
       }// End if
+      else
+        dbg(TRANSPORT_CHANNEL,"NOT FOUND --------\n");
     }// End acceptTimer()
 
 
@@ -653,8 +655,8 @@ implementation{
    event void CommandHandler.setTestClient(uint16_t dest, uint16_t srcPort, uint16_t destPort, uint16_t transfer){
     socket_addr_t address;  // socket address
     socket_addr_t socketAdr,serverAdr;  // server address
-    globalTransfer = transfer;
-    dbg(TRANSPORT_CHANNEL, "Inside setTestClient -- Testing Client.\n");
+    globalTransfer = transfer+1;
+    dbg(TRANSPORT_CHANNEL, "Inside setTestClient -- Testing Client. Initial GLOBALTRANSFER %d\n",globalTransfer);
 
     // Get Socket fd
     fd = call Transport.socket();
@@ -842,11 +844,13 @@ implementation{
       if(receivedSocket->flag == 2){
         // Pack to reply to the SYN_ACK; Connection has been ESTABLISHED
         pack AckPack;
+        uint8_t transferArray [globalTransfer + 1];
+        uint16_t sz;
         //Timereceivevd
         TimeReceived = call LocalTime.get();
         estimateRTT = TimeReceived - TimeSent;
 
-        dbg(TRANSPORT_CHANNEL,"Received SYN_ACK at time %d.\n",estimateRTT);
+        dbg(TRANSPORT_CHANNEL,"Received SYN_ACK! send time: %d, received time: %d, RTT:%d.\n",TimeSent,TimeReceived, estimateRTT);
         tempSocket = call Transport.getSocket(i);
         //Update Socket State
         tempSocket.flag = 3;
@@ -895,14 +899,22 @@ implementation{
         //call writtenTimer.startPeriodic(25000);
 
         call Sender.send(AckPack, next);
+        for(i = 0; i < globalTransfer; i++){
+          transferArray[i] = i;
+        }
+
+        sz = call Transport.write(fd,transferArray,globalTransfer);
+        globalTransfer = globalTransfer - sz;
+
+        dbg(TRANSPORT_CHANNEL,"SIZE = %d, GLOBALTRANSFER = %d\n",sz,globalTransfer);
         return;
 
       } // End flag == 2
 
      if(receivedSocket->flag == 3){
-
+/*
       dbg(TRANSPORT_CHANNEL,"Received ACK 3-Way Handshake Complete.\n");
-
+        
         while(!call Socketlist.isEmpty()){
           tempSocket = call Socketlist.front();
           call Socketlist.popfront();
@@ -920,7 +932,8 @@ implementation{
           call Socketlist.pushfront(call modSockets.front());
           call modSockets.popfront();
         }
-      /*
+        */
+      
         uint8_t buff[1];
         
         tempSocket = call Transport.getSocket(i);
@@ -936,7 +949,7 @@ implementation{
         //update the state of the socket
         tempSocket.state = ESTABLISHED;
         call Transport.setSocket(tempSocket.fd, tempSocket);
-*/
+
         return;
 
       }// End flag == 3
@@ -954,11 +967,12 @@ implementation{
         //bufferLength = call Transport.read(receivedSocket->fd,receivedSocket->sendBuff, bufferLength);
         call Transport.read(receivedSocket->fd,receivedSocket->sendBuff, bufferLength);
         dbg(TRANSPORT_CHANNEL,"Finished flag4.read().\n");
-
+        /*
         for(j = 0; j< bufferLength; j++){
           printf("%d ",receivedSocket->sendBuff[j]);          
         }
         printf("\n");
+        */
         //Get current state of socket
         tempSocket = call Transport.getSocket(i);
 

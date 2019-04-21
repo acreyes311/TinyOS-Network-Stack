@@ -231,6 +231,8 @@ implementation {
     //Then make a packet an send ACKs for each time it receives data.
     //Asks client to send more data
     //Return how much data the server was able to read from buff, send from Client sendBuff(written to Servers rcvdBuff).
+
+    /*
     command uint16_t Transport.write(socket_t fd, uint8_t *buff, uint16_t bufflen) {
         socket_store_t temp;
         uint8_t buffInd, buffLimit, last,next;
@@ -295,14 +297,15 @@ implementation {
             //return writeable;
         }
     }
-
-    /*
+*/
+    
    command uint16_t Transport.write(socket_t fd, uint8_t *buff, uint16_t bufflen) {
     socket_store_t temp;
     int i,j,lw;
     int avail;
     uint16_t nextHop;
     LinkState ls;
+
     // will write to this packet
     pack Data;
 
@@ -372,7 +375,7 @@ implementation {
     return 0;   // Failed to write
     
    } // End of WRITE()
-*/
+
    /**
     * This will pass the packet so you can handle it internally. 
     * @param
@@ -406,6 +409,97 @@ implementation {
     // Then make packet andd send ACKs for each time it receives data.
     // Ask client to send more data
     // Return how much data the server was able to read from buffsent from Client sendBuff(written to Servers rcvdBuff)
+
+   command uint16_t Transport.read(socket_t fd, uint8_t *buff, uint16_t bufflen) {
+    socket_store_t temp, transferSocket;
+    uint8_t buffInd,lastReceived,i;
+    uint16_t read,write,index;
+    bool found = FALSE;
+
+    for(i = 0; i < call SocketList.size();i++){
+        temp = call SocketList.get(i);
+
+        if(temp.fd == fd && found == FALSE){
+            index = i;
+            found = TRUE;
+        }//end if
+    }//end for
+    //dbg(TRANSPORT_CHANNEL,"AFTER FIRST FOR LOOP IN READ________\n");
+    if(found == FALSE){
+        dbg(TRANSPORT_CHANNEL,"INSIDE READ: NOT FOUND RETURN 0\n");
+        return 0;
+    }
+    else{
+        temp = call SocketList.get(index);
+        //dbg(TRANSPORT_CHANNEL,"READ___ bufflen:%d, temp.efWnd:%d\n",bufflen,temp.effectiveWindow);
+        // Check if size of buffer(data plan to write) is larger than sockets effective window
+        //if(bufflen > temp.effectiveWindow){ // FOR SOME REASON effectiveWindow = 0. Should be 128 set in socket()
+         //   read = temp.effectiveWindow;
+       // }
+        // else sart with sockets next expected
+        //else{
+        read = bufflen;
+        //dbg(TRANSPORT_CHANNEL," NOW READ ============== %d\n",read);
+       // }
+        lastReceived = temp.nextExpected;
+
+        for(i = 0; i < read; i++){
+            temp.rcvdBuff[lastReceived] = buff[i];
+
+            lastReceived++;
+            write++;
+            dbg(TRANSPORT_CHANNEL,"FORLOOP___rcvdBuff:%d, lastReceived:%d, write:%d, i:%d\n",temp.rcvdBuff[lastReceived],lastReceived,write,i); // i not increasing?
+
+            //decrease window
+            if(temp.effectiveWindow > 0)
+                temp.effectiveWindow--;
+            else
+                break;
+        }// end for
+        dbg(TRANSPORT_CHANNEL,"READ_____ i = %d, read = %d\n",i,read);  // Getting 0's because read = 0 above
+        //Update socket about last data received and last data written onto buffer
+        temp.lastRcvd = i;
+        temp.rcvdBuff[lastReceived] = 255;
+
+        //Check for effective window
+        if(temp.effectiveWindow == 0)
+            temp.nextExpected = 0;
+        // Else still have room     
+        else
+            temp.nextExpected = lastReceived + 1;
+
+        read = 0;
+        dbg(TRANSPORT_CHANNEL,"READ_____BEFORE PRINT LOOP. t.lstRcv=%d\n",temp.lastRcvd);   // Getting 0 because of temp.lastRcvd = i = 0
+        //PRINT OUT DATA
+        for(i = 0; i < temp.lastRcvd; i++){
+            //if(temp.rcvdBuff[i] != 255 && temp.rcvdBuff[i] != 0){
+                dbg(TRANSPORT_CHANNEL,"%d\n",temp.rcvdBuff[i]);
+                temp.rcvdBuff[i] = 255;
+                temp.effectiveWindow++;
+                read++;
+            //}//end if
+        }//end print for
+
+        while(!call SocketList.isEmpty()){
+            transferSocket = call SocketList.front();
+            if(temp.fd != transferSocket.fd){
+                call socketTemp.pushfront(call SocketList.front());                
+            }
+            else
+                call socketTemp.pushfront(temp);
+            call SocketList.popfront();    
+        }//end !while
+
+        while(!call socketTemp.isEmpty()){
+            call SocketList.pushfront(call socketTemp.front());
+            call socketTemp.popfront();
+        }//end 2nd while
+
+        return read;
+    }
+   }
+
+   /* 
    command uint16_t Transport.read(socket_t fd, uint8_t *buff, uint16_t bufflen) {
         // *JF
     int i,j,len;
@@ -452,7 +546,7 @@ implementation {
     return 0;   // Failed
 
    } // End of READ
-
+*/
 
    /**
     * Attempts a connection to an address.
@@ -587,7 +681,7 @@ implementation {
 
         if(temp.fd == fd) {
             temp = call SocketList.remove(i);
-            temp.state = LISTEN; //fixed something
+            temp.state = LISTEN;
             call SocketList.pushback(temp);
 
             dbg(TRANSPORT_CHANNEL, "Socket %d has been set to listen.\n", fd);
