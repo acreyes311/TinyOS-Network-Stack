@@ -453,10 +453,10 @@ implementation {
             //decrease window
             if(temp.effectiveWindow > 0)
                 temp.effectiveWindow--;
-            else
-                break;
+           // else
+              //  break;
         }// end for
-        dbg(TRANSPORT_CHANNEL,"READ_____ i = %d, read = %d\n",i,read);  // Getting 0's because read = 0 above
+        //dbg(TRANSPORT_CHANNEL,"READ_____ i = %d, read = %d\n",i,read);  // Getting 0's because read = 0 above
         //Update socket about last data received and last data written onto buffer
         temp.lastRcvd = i;
         temp.rcvdBuff[lastReceived] = 255;
@@ -469,15 +469,15 @@ implementation {
             temp.nextExpected = lastReceived + 1;
 
         read = 0;
-        dbg(TRANSPORT_CHANNEL,"READ_____BEFORE PRINT LOOP. t.lstRcv=%d\n",temp.lastRcvd);   // Getting 0 because of temp.lastRcvd = i = 0
+        //dbg(TRANSPORT_CHANNEL,"READ_____BEFORE PRINT LOOP. t.lstRcv=%d\n",temp.lastRcvd);   // Getting 0 because of temp.lastRcvd = i = 0
         //PRINT OUT DATA
         for(i = 0; i < temp.lastRcvd; i++){
-            //if(temp.rcvdBuff[i] != 255 && temp.rcvdBuff[i] != 0){
+            if(temp.rcvdBuff[i] != 255 && temp.rcvdBuff[i] != 0){
                 dbg(TRANSPORT_CHANNEL,"%d\n",temp.rcvdBuff[i]);
                 temp.rcvdBuff[i] = 255;
                 temp.effectiveWindow++;
                 read++;
-            //}//end if
+            }//end if
         }//end print for
 
         while(!call SocketList.isEmpty()){
