@@ -852,14 +852,15 @@ implementation{
 
         dbg(TRANSPORT_CHANNEL,"Received SYN_ACK! send time: %d, received time: %d, RTT:%d.\n",TimeSent,TimeReceived, estimateRTT);
         tempSocket = call Transport.getSocket(i);
+
         //Update Socket State
         tempSocket.flag = 3;
         tempSocket.dest.port = receivedSocket->src;
         tempSocket.dest.addr = myMsg->src;
         tempSocket.state = ESTABLISHED;
         call Transport.setSocket(tempSocket.fd, tempSocket);
+
         //Make ACK packet
-        //makePack(&AckPack, TOS_NODE_ID, myMsg->src, myMsg->TTL, PROTOCOL_TCP, myMsg->seq, &tempSocket, (uint8_t)sizeof(tempSocket));
         AckPack.dest = myMsg->src;
         AckPack.src = TOS_NODE_ID;
         AckPack.seq = myMsg->seq + 1;
@@ -903,7 +904,7 @@ implementation{
           transferArray[i] = i;
         }
 
-        sz = call Transport.write(fd,transferArray,globalTransfer);
+        sz = call Transport.write(tempSocket.fd,transferArray,globalTransfer);
         globalTransfer = globalTransfer - sz;
 
         dbg(TRANSPORT_CHANNEL,"SIZE = %d, GLOBALTRANSFER = %d\n",sz,globalTransfer);
@@ -912,7 +913,7 @@ implementation{
       } // End flag == 2
 
      if(receivedSocket->flag == 3){
-/*
+
       dbg(TRANSPORT_CHANNEL,"Received ACK 3-Way Handshake Complete.\n");
         
         while(!call Socketlist.isEmpty()){
@@ -932,8 +933,9 @@ implementation{
           call Socketlist.pushfront(call modSockets.front());
           call modSockets.popfront();
         }
-        */
-      
+
+        
+      /*
         uint8_t buff[1];
         
         tempSocket = call Transport.getSocket(i);
@@ -949,7 +951,7 @@ implementation{
         //update the state of the socket
         tempSocket.state = ESTABLISHED;
         call Transport.setSocket(tempSocket.fd, tempSocket);
-
+*/
         return;
 
       }// End flag == 3
@@ -961,7 +963,7 @@ implementation{
         pack DATA_ACK;
         //Length of buffer same as value of lastWritten index in buffer
         uint16_t bufferLength = 8;
-        //uint16_t bufferLength = myMsg->seq;
+        //uint16_t bufferLength = globalTransfer;
 
         //Read the buffer from the DATA packet.
         //bufferLength = call Transport.read(receivedSocket->fd,receivedSocket->sendBuff, bufferLength);
