@@ -1,3 +1,9 @@
+* 4/21/19 - Timers dont work. I think we may not end up using them.
+          - Printing incorrect still.  I trie the globalTransfer/maxTransfer but idk what its doing really. Maybe just go back to how it
+            was before.
+          - Close/flag 6 still not entering.
+          - Need to add comments to make demo easier.
+
 * 4/19/19 - Timers still not correct
           - Print not correct
           - ClientClose that sends out packet with flag = 6 not entering. Maybe cause of our Confirmed or Socketlists again
