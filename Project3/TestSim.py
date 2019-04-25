@@ -15,7 +15,7 @@ class TestSim:
     CMD_ROUTE_DUMP=3
     CMD_TEST_CLIENT = 4
     CMD_TEST_SERVER = 5
-    #CMD_CLIENT_CLOSE = 6
+    CMD_CLIENT_CLOSE = 7
 
     # CHANNELS - see includes/channels.h
     COMMAND_CHANNEL="command";
@@ -144,8 +144,8 @@ class TestSim:
     def TestClient(self, source, sourcePort, destPort, dest, transfer):
         self.sendCMD(self.CMD_TEST_CLIENT, source, "{0}{1}{2}{3}".format(chr(dest),chr(sourcePort),chr(destPort),transfer));
 
-    # def ClientClose(self, clientAddr, destination, srcPort, destPort):
-    #     self.sendCMD(self.CMD_CLIENT_CLOSE, source, "{0}{1}{2}".format(chr(destination),chr(srcPort),destPort));
+    def ClientClose(self, clientAddr, destination, srcPort, destPort):
+        self.sendCMD(self.CMD_CLIENT_CLOSE, clientAddr, "{0}{1}{2}".format(chr(destination),chr(srcPort),destPort));
 
 
 
@@ -164,25 +164,25 @@ def main():
     s.addChannel(s.TRANSPORT_CHANNEL); # project 3
 
     s.runTime(500);
-    s.ping(5,7,"Hello, World, 5-7");
+    s.ping(5,8,"Hello, World, 5-8");
     s.runTime(200);
     #s.ping(3, 9, "Hi!!! 3-9");
     #s.runTime(100);
 
-    # s.neighborDMP(9);
-    # s.runTime(100);
+    #s.neighborDMP(9);
+    #s.runTime(100);
 
-    # s.routeDMP(9);
-    # s.runTime(100);
+    #s.routeDMP(9);
+    #s.runTime(100);
 
     s.TestServer(2,80);
     s.runTime(100);
     
-    s.TestClient(3,64,60,2,8);
+    s.TestClient(3,64,60,2,40);
     s.runTime(100);
 
-    #s.ClientClose(3,64,60,2);
-    #s.runTime(100);
+    s.ClientClose(3,64,60,2);
+    s.runTime(100);
 
     # s.ping(4, 6, "Hi!!! 4-6");
     # s.runTime(100);

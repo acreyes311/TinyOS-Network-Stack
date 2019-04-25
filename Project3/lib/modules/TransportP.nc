@@ -104,6 +104,7 @@ implementation {
    command socket_t Transport.socket(){
     socket_t fd;    // fd ID
     socket_store_t newSocket;  // socket
+    int i;
 
     if(call SocketList.size() < MAX_NUM_OF_SOCKETS) { // < 10
         // Gets the FD id of last index in list
@@ -122,6 +123,10 @@ implementation {
         newSocket.effectiveWindow = SOCKET_BUFFER_SIZE; // 128
 
         //Push into socket list
+        for(i = 0; i < SOCKET_BUFFER_SIZE; i++){
+            newSocket.rcvdBuff[i] = 255;
+            newSocket.sendBuff[i] = 255;
+        }
         call SocketList.pushback(newSocket);
 
         dbg(TRANSPORT_CHANNEL, "Socket %d Allocated.\n",newSocket.fd);
@@ -298,6 +303,7 @@ implementation {
         }
     }
 */
+
     
    command uint16_t Transport.write(socket_t fd, uint8_t *buff, uint16_t bufflen) {
     socket_store_t temp;
@@ -375,6 +381,7 @@ implementation {
     return 0;   // Failed to write
     
    } // End of WRITE()
+  
 
    /**
     * This will pass the packet so you can handle it internally. 
@@ -434,17 +441,17 @@ implementation {
         //dbg(TRANSPORT_CHANNEL,"READ___ bufflen:%d, temp.efWnd:%d\n",bufflen,temp.effectiveWindow);
         // Check if size of buffer(data plan to write) is larger than sockets effective window
         //if(bufflen > temp.effectiveWindow){ // FOR SOME REASON effectiveWindow = 0. Should be 128 set in socket()
-         //   read = temp.effectiveWindow;
-       // }
+        //    read = temp.effectiveWindow;
+        //}
         // else sart with sockets next expected
         //else{
         read = bufflen;
         //dbg(TRANSPORT_CHANNEL," NOW READ ============== %d\n",read);
-       // }
+        //}
         lastReceived = temp.nextExpected;
 
         for(i = 0; i < read; i++){
-            temp.rcvdBuff[lastReceived] = buff[i];
+            temp.rcvdBuff[lastReceived] = lastReceived;//buff[i];
 
             lastReceived++;
             write++;
@@ -453,8 +460,8 @@ implementation {
             //decrease window
             if(temp.effectiveWindow > 0)
                 temp.effectiveWindow--;
-           // else
-              //  break;
+            //else
+               // break;
         }// end for
         //dbg(TRANSPORT_CHANNEL,"READ_____ i = %d, read = %d\n",i,read);  // Getting 0's because read = 0 above
         //Update socket about last data received and last data written onto buffer
@@ -468,7 +475,7 @@ implementation {
         else
             temp.nextExpected = lastReceived + 1;
 
-        read = 0;
+        //read = 0;
         //dbg(TRANSPORT_CHANNEL,"READ_____BEFORE PRINT LOOP. t.lstRcv=%d\n",temp.lastRcvd);   // Getting 0 because of temp.lastRcvd = i = 0
         //PRINT OUT DATA
         for(i = 0; i < temp.lastRcvd; i++){
@@ -477,7 +484,6 @@ implementation {
                 temp.rcvdBuff[i] = 255;
                 temp.effectiveWindow++;
                 read++;
-                       // printf("\n");
             }//end if            
         }//end print for
 
