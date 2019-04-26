@@ -392,6 +392,7 @@ implementation {
     *    packet or FAIL if there are errors.
     */
    command error_t Transport.receive(pack* package) {
+    //Handled in Node.nc
 
    }
 
@@ -463,7 +464,7 @@ implementation {
             //else
                // break;
         }// end for
-        //dbg(TRANSPORT_CHANNEL,"READ_____ i = %d, read = %d\n",i,read);  // Getting 0's because read = 0 above
+        //dbg(TRANSPORT_CHANNEL,"READ_____ i = %d, read = %d\n",i,read); 
         //Update socket about last data received and last data written onto buffer
         temp.lastRcvd = i;
         temp.rcvdBuff[lastReceived] = 255;
@@ -476,7 +477,7 @@ implementation {
             temp.nextExpected = lastReceived + 1;
 
         //read = 0;
-        //dbg(TRANSPORT_CHANNEL,"READ_____BEFORE PRINT LOOP. t.lstRcv=%d\n",temp.lastRcvd);   // Getting 0 because of temp.lastRcvd = i = 0
+        //dbg(TRANSPORT_CHANNEL,"READ_____BEFORE PRINT LOOP. t.lstRcv=%d\n",temp.lastRcvd);  
         //PRINT OUT DATA
         for(i = 0; i < temp.lastRcvd; i++){
             if(temp.rcvdBuff[i] != 255 && temp.rcvdBuff[i] != 0){

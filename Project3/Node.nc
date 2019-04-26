@@ -716,15 +716,7 @@ implementation{
    // Terminate Connection.
    // find fd associated with [clieant address],[srcPort],[destPort],[dest];
    //     close(fd)
-   /*
-   event void CommandHandler.ClientClose(uint8_t clientAddr, uint8_t srcPort, uint8_t destPort, uint8_t dest)  {
-    int i;
-    socket_store_t socket;
-    socket_t fd;
 
-    call Transport.close(fd);
-   }
-  */
   event void CommandHandler.ClientClose(uint8_t clientAddr, uint8_t srcPort, uint8_t destPort, uint8_t dest)  {
     pack Fin;
     socket_store_t temp, temp2;
@@ -784,6 +776,9 @@ implementation{
   // Flag 1: Received SYN from src, Send SYN_ACK, change state to SYN_RCVD
   // Flag 2: Received SYN_ACK from src, Send ACK, change state to ESTABLISHED
   // FLAG 3: Received ACK from src, change state to ESTABLISHED
+  // Flag 4: Data pack from write(), make and send DATA_ACK
+  // Flag 5: Data reached destination
+  // Flag 6: Receive FIN pack and close
   // After flag 3 both client and server states are established and ready to transmit data
 
   void TCPProtocol(pack *myMsg) {
@@ -801,7 +796,6 @@ implementation{
     // SYN_ACK Packet
     pack SynAckPack;
 
-    //tcp_pack* msg = (tcp_pack*) myMsg->payload;
     receivedSocket = myMsg->payload;
     //tempAddr = receivedSocket->dest;
 
@@ -819,7 +813,7 @@ implementation{
         tempSocket.dest.port = receivedSocket->src;
         tempSocket.dest.addr = myMsg->src;
         tempSocket.state = SYN_RCVD;
-        //call Transport.bind(tempSocket.fd, tempSocket); // Change to setSocket/Update
+        
         call Transport.setSocket(tempSocket.fd, tempSocket);//update socketlist
 
         //Make our SYN_ACK
@@ -873,8 +867,8 @@ implementation{
       if(receivedSocket->flag == 2){
         // Pack to reply to the SYN_ACK; Connection has been ESTABLISHED
         pack AckPack;
-        uint8_t transferArray [globalTransfer + 1];
-        uint16_t sz;
+        //uint8_t transferArray [globalTransfer + 1];
+
         //Timereceivevd
         TimeReceived = call LocalTime.get();
         estimateRTT = TimeReceived - TimeSent;
@@ -888,9 +882,7 @@ implementation{
         tempSocket.dest.addr = myMsg->src;
         tempSocket.state = ESTABLISHED;
         call Transport.setSocket(tempSocket.fd, tempSocket);
-
-        // makePack(&AckPack, TOS_NODE_ID, myMsg->src, myMsg->TTL, PROTOCOL_TCP, myMsg->seq, &tempSocket, (uint8_t)sizeof(tempSocket));
-        
+       
         
         //Make ACK packet
         AckPack.dest = myMsg->src;
@@ -902,8 +894,7 @@ implementation{
         memcpy(AckPack.payload,&tempSocket, (uint8_t)sizeof(tempSocket));
         
         dbg(TRANSPORT_CHANNEL,"SYN_ACK received, connection ESTABLISHED, replying with ACK.\n");
-
-        //call Sender.send(AckPack, call tableroute.get(tempSocket.dest.addr));     
+    
         // Get Our Next Destination
         for(j = 0; j < call Confirmed.size();j++){
           dest = call Confirmed.get(j);
@@ -933,12 +924,12 @@ implementation{
 
         //call writtenTimer.startPeriodic(25000);
         call Sender.send(AckPack, next);
-        for(i = 0; i < globalTransfer; i++){
-          transferArray[i] = i;
-        }
+        // for(i = 0; i < globalTransfer; i++){
+        //   transferArray[i] = i;
+        // }
 
-        sz = call Transport.write(tempSocket.fd,transferArray,globalTransfer);
-        globalTransfer = globalTransfer - sz;
+        //sz = call Transport.write(tempSocket.fd,transferArray,globalTransfer);
+        //globalTransfer = globalTransfer - sz;
         //call writtenTimer.startPeriodic(25000);
         //dbg(TRANSPORT_CHANNEL,"SIZE = %d, GLOBALTRANSFER = %d\n",sz,globalTransfer);
         return;
@@ -946,9 +937,19 @@ implementation{
       } // End flag == 2
 
      if(receivedSocket->flag == 3){
+        uint8_t transferArray [globalTransfer + 1];
+        uint16_t sz;
 
-      dbg(TRANSPORT_CHANNEL,"Received ACK 3-Way Handshake Complete.\n");
-        
+        for(i = 0; i < globalTransfer; i++){
+          transferArray[i] = i;
+        }
+
+      dbg(TRANSPORT_CHANNEL,"Received ACK 3-Way Handshake Complete!.\n");
+
+        sz = call Transport.write(tempSocket.fd,transferArray,globalTransfer);
+        //globalTransfer = globalTransfer - sz;
+
+        //Insert into socket list
         while(!call Socketlist.isEmpty()){
           tempSocket = call Socketlist.front();
           call Socketlist.popfront();
@@ -967,7 +968,6 @@ implementation{
           call modSockets.popfront();
         }
 
-
         return;
 
       }// End flag == 3
@@ -979,20 +979,19 @@ implementation{
         pack DATA_ACK;
         //Length of buffer same as value of lastWritten index in buffer
         uint16_t bufferLength = 8;
-        //uint16_t bufferLength = globalTransfer;
+
         //for(i = 0; i < bufferLength; i++)
           //dbg(TRANSPORT_CHANNEL,"print sendbuff in clientsocket. Index %d value %d\n",i,receivedSocket->sendBuff[i]);
 
         //Read the buffer from the DATA packet.
-        //bufferLength = call Transport.read(receivedSocket->fd,receivedSocket->sendBuff, bufferLength);
         call Transport.read(receivedSocket->fd,receivedSocket->sendBuff, bufferLength);
         dbg(TRANSPORT_CHANNEL,"Finished flag4.read().\n");
-
 
         //update state of socket
         tempSocket.flag = 5;
         tempSocket.nextExpected = bufferLength + 1;
 
+        //Set Socket in Transport
         call Transport.setSocket(tempSocket.fd, tempSocket);
 
         //Make DATA_ACK PACK
@@ -1043,6 +1042,7 @@ implementation{
 
         return;
       }//end flag == 5
+
       //flag = 6 receive Fin pack and close
       if(receivedSocket->flag == 6){
         // Closed Socket
@@ -1066,7 +1066,6 @@ implementation{
           call modSockets.popfront();
         }
         return;
-
       }//end flag = 6
     }//end for
 
