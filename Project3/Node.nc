@@ -978,7 +978,8 @@ implementation{
         //DATA_ACK packet to acknowledge to other node that data has been received
         pack DATA_ACK;
         //Length of buffer same as value of lastWritten index in buffer
-        uint16_t bufferLength = 8;
+        //uint16_t bufferLength = SOCKET_BUFFER_SIZE;
+        uint16_t bufferLength = 16;
 
         //for(i = 0; i < bufferLength; i++)
           //dbg(TRANSPORT_CHANNEL,"print sendbuff in clientsocket. Index %d value %d\n",i,receivedSocket->sendBuff[i]);
@@ -992,7 +993,7 @@ implementation{
         tempSocket.nextExpected = bufferLength + 1;
 
         //Set Socket in Transport
-        call Transport.setSocket(tempSocket.fd, tempSocket);
+       // call Transport.setSocket(tempSocket.fd, tempSocket);
 
         //Make DATA_ACK PACK
         DATA_ACK.dest = myMsg->src;

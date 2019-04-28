@@ -439,32 +439,30 @@ implementation {
     }
     else{
         temp = call SocketList.get(index);
-        //dbg(TRANSPORT_CHANNEL,"READ___ bufflen:%d, temp.efWnd:%d\n",bufflen,temp.effectiveWindow);
-        // Check if size of buffer(data plan to write) is larger than sockets effective window
-        //if(bufflen > temp.effectiveWindow){ // FOR SOME REASON effectiveWindow = 0. Should be 128 set in socket()
+        
+        //Check if size of buffer(data plan to write) is larger than sockets effective window
+        // if(bufflen > temp.effectiveWindow){ // FOR SOME REASON effectiveWindow = 0. Should be 128 set in socket()
         //    read = temp.effectiveWindow;
-        //}
-        // else sart with sockets next expected
+        // }
+        //else sart with sockets next expected
         //else{
         read = bufflen;
-        //dbg(TRANSPORT_CHANNEL," NOW READ ============== %d\n",read);
-        //}
+        // dbg(TRANSPORT_CHANNEL," NOW READ ============== %d\n",read);
+        // }
         lastReceived = temp.nextExpected;
 
+        // move into received buffer
         for(i = 0; i < read; i++){
-            temp.rcvdBuff[lastReceived] = lastReceived;//buff[i];
-
+            temp.rcvdBuff[lastReceived] = lastReceived + temp.lastRcvd;//buff[i];
             lastReceived++;
             write++;
-            //dbg(TRANSPORT_CHANNEL,"FORLOOP___rcvdBuff:%d, lastReceived:%d, write:%d, i:%d\n",temp.rcvdBuff[lastReceived],lastReceived,write,i); // i not increasing?
-
+            //dbg(TRANSPORT_CHANNEL,"FORLOOP___rcvdBuff:%d, lastReceived:%d, write:%d, i:%d\n",temp.rcvdBuff[lastReceived],lastReceived,write,i);
             //decrease window
             if(temp.effectiveWindow > 0)
                 temp.effectiveWindow--;
-            //else
-               // break;
+
         }// end for
-        //dbg(TRANSPORT_CHANNEL,"READ_____ i = %d, read = %d\n",i,read); 
+
         //Update socket about last data received and last data written onto buffer
         temp.lastRcvd = i;
         temp.rcvdBuff[lastReceived] = 255;
@@ -477,7 +475,7 @@ implementation {
             temp.nextExpected = lastReceived + 1;
 
         //read = 0;
-        //dbg(TRANSPORT_CHANNEL,"READ_____BEFORE PRINT LOOP. t.lstRcv=%d\n",temp.lastRcvd);  
+        dbg(TRANSPORT_CHANNEL,"---READING DATA ----\n");  
         //PRINT OUT DATA
         for(i = 0; i < temp.lastRcvd; i++){
             if(temp.rcvdBuff[i] != 255 && temp.rcvdBuff[i] != 0){
@@ -488,7 +486,7 @@ implementation {
             }//end if            
         }//end print for
 
-
+        // Write done now puch into temp then socketlist
         while(!call SocketList.isEmpty()){
             transferSocket = call SocketList.front();
             if(temp.fd != transferSocket.fd){
