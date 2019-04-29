@@ -178,7 +178,7 @@ def main():
     s.TestServer(2,80);
     s.runTime(100);
     
-    s.TestClient(3,64,60,2,40);
+    s.TestClient(3,64,60,2,128);
     s.runTime(100);
 
     s.ClientClose(3,64,60,2);
