@@ -765,10 +765,50 @@ implementation{
     }
   
 
-   event void CommandHandler.setAppServer(){}
+    // Setup server to port 41 node id 1 per project spec
+   event void CommandHandler.setAppServer(uint8_t clientport, char* username){
+    // Sockets
+    socket_addr_t address;
+    socket_t fd;
+
+    //Update Sockets
+    fd = call Transport.socket();
+    address.addr = TOS_NODE_ID;
+    address.port = 41;
+
+    if(call Transport.bind(fd,&address) == SUCCESS && call Transport.listen(fd) == SUCCESS)
+      dbg(TRANSPORT_CHANNEL,"Socket %d is now Listening.\n",fd);
+    else
+      dbg(TRANSPORT_CHANNEL,"Unable to setAppServer.\n");
+
+    // CONNECT USER/CLIENT BELOW OR DO setAppClient()
+   }
 
    event void CommandHandler.setAppClient(){}
 
+   // receie through injected packets.
+   // Once server receives message broadcast to all connected clients
+   // include initial client user in broadcast message
+   // vancu-broadcast, ayeh-message?
+   event void CommandHandler.broadcastMessage(char *message){
+    socket_addr_t
+    int i = 0;
+    bool end = FALSE;
+
+   }
+
+   // Instead of broadcast to all clients only send to one.
+   // vancu-unicast, ayeh-whisper
+   event void CommandHandler.unicastMessage(char username, char *message,){
+
+   }
+
+   // From client to server.
+   // Serer replies to the client that made the request with list of userse that are currently connected to server
+   // vancu-AppPrint
+   event void CommandHandler.printUsers(){
+
+   }
 
    // ----------- Project 3 TCP PROTOCOL-------------
   // Iterate through list and find index that has Socket with matching port. Then Check Flag
