@@ -1,0 +1,6 @@
+* 4/29/19 - Started Commands setAppSerer/broadcast/unicast/print.
+            Still need to do all the CommandHandler.h/command.h/TestSim stuff.
+            Probably have to add more stuff in Transport. (connectUser function?) more read/write stuff
+            more flags.
+            
+            
