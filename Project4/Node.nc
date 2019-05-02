@@ -96,6 +96,7 @@ implementation{
    uint32_t TimeSent;
    uint16_t globalTransfer = 0;
    uint32_t estimateRTT;
+   char user[25];
 
    // Prototypes
    bool isKnown(pack *p);  // already seen function
@@ -766,7 +767,7 @@ implementation{
   
 
     // Setup server to port 41 node id 1 per project spec
-   event void CommandHandler.setAppServer(uint8_t clientport, char* username){
+   /*event void CommandHandler.setAppServer(uint8_t clientport, char* username){
     // Sockets
     socket_addr_t address;
     socket_t fd;
@@ -783,7 +784,8 @@ implementation{
 
     // CONNECT USER/CLIENT BELOW OR DO setAppClient()
    }
-   /*
+   */
+   
       event void CommandHandler.setAppServer(){
     socket_addr_t address;
     //socket_t fd;  // global fd up top
@@ -803,7 +805,7 @@ implementation{
       dbg(TRANSPORT_CHANNEL, "Unable to set socket %d.\n", fd);
 
    }// End setAppServer
-   */
+   
 
    event void CommandHandler.setAppClient(char* username){
       pack client;
@@ -842,16 +844,16 @@ implementation{
    // include initial client user in broadcast message
    // vancu-broadcast, ayeh-message?
    event void CommandHandler.broadcastMessage(char *message){
-    socket_addr_t
-    int i = 0;
+    //socket_addr_t
+    //int i = 0;
     bool end = FALSE;
     pack broad;
       char chat[25];
-     // uint8_t i= 0;
+     uint8_t i= 0;
       uint8_t dest = 1;
 
       while(!end){
-      if(username[i] == '\n'){
+      if(message[i] == '\n'){
         chat[i] =  message[i];
         globalTransfer++;
         end = TRUE;
@@ -875,16 +877,16 @@ implementation{
 
    // Instead of broadcast to all clients only send to one.
    // vancu-unicast, ayeh-whisper
-   event void CommandHandler.unicastMessage(char* username, char *message,){
+   event void CommandHandler.unicastMessage(char* username, char *message){
      uint8_t i =0 ;
       bool end = TRUE;
       while(end){
-        if(dest[i] =="\n"){
-          printf("%c", username[i]);
+        if(username[i] =="\n"){
+          printf("%c", message[i]);
           end = FALSE;
         }
         else{
-           printf("%c", username[i]);
+           printf("%c", message[i]);
            i++;
         }
       }
