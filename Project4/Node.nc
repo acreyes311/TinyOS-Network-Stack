@@ -784,7 +784,37 @@ implementation{
     // CONNECT USER/CLIENT BELOW OR DO setAppClient()
    }
 
-   event void CommandHandler.setAppClient(){}
+   event void CommandHandler.setAppClient(char* username){
+      pack client;
+    bool end =FALSE;
+    uint8_t i =0;
+    socket_addr_t address;
+    socket_addr_t serveraddress;
+     fd = call Transport.socket();
+     dbg(GENERAL_CHANNEL, "Inside setAppServer-- Initializing CLIENT\n");
+     address.addr = TOS_NODE_ID;
+     serveraddress.port= 41;
+     serveraddress.addr= 1;
+
+     while(!end){
+      if(username[i] == '\n'){
+        user[i] = username[i];
+        globalTransfer++;
+        end = TRUE;
+        //i++;
+      }
+      else{
+        user[i] =username[i];
+        globalTransfer++;
+        i++;
+      }
+     }
+
+    if(call Transport.bind(fd, &address) == SUCCESS){
+        dbg(TRANSPORT_CHANNEL, "Test app client\n");
+     // call Transport.connectuser(fd, &serveraddress);
+    }
+   }
 
    // receie through injected packets.
    // Once server receives message broadcast to all connected clients
@@ -794,20 +824,57 @@ implementation{
     socket_addr_t
     int i = 0;
     bool end = FALSE;
+    pack broad;
+      char chat[25];
+     // uint8_t i= 0;
+      uint8_t dest = 1;
+
+      while(!end){
+      if(username[i] == '\n'){
+        chat[i] =  message[i];
+        globalTransfer++;
+        end = TRUE;
+        //i++;
+      }
+      else{
+        user[i] =message[i];
+        globalTransfer++;
+        i++;
+      }
+     }
+     broad.src = TOS_NODE_ID;
+     broad.dest = 1;
+     broad.seq = 1;
+     broad.TTL= MAX_TTL;
+
+     memcpy(broad.payload, &chat, (uint8_t)sizeof(chat));
+    dbg(TRANSPORT_CHANNEL, "Sending Broadcast Message\n");   
 
    }
 
    // Instead of broadcast to all clients only send to one.
    // vancu-unicast, ayeh-whisper
-   event void CommandHandler.unicastMessage(char username, char *message,){
-
+   event void CommandHandler.unicastMessage(char* username, char *message,){
+     uint8_t i =0 ;
+      bool end = TRUE;
+      while(end){
+        if(dest[i] =="\n"){
+          printf("%c", username[i]);
+          end = FALSE;
+        }
+        else{
+           printf("%c", username[i]);
+           i++;
+        }
+      }
+      printf("\n");
    }
 
    // From client to server.
-   // Serer replies to the client that made the request with list of userse that are currently connected to server
+   // Serer replies to the client that made the request with list of users that are currently connected to server
    // vancu-AppPrint
    event void CommandHandler.printUsers(){
-
+      printf("print users\n");
    }
 
    // ----------- Project 3 TCP PROTOCOL-------------
