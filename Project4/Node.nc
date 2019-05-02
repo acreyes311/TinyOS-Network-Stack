@@ -783,6 +783,27 @@ implementation{
 
     // CONNECT USER/CLIENT BELOW OR DO setAppClient()
    }
+   /*
+      event void CommandHandler.setAppServer(){
+    socket_addr_t address;
+    //socket_t fd;  // global fd up top
+
+    fd = call Transport.socket();
+
+     dbg(GENERAL_CHANNEL, "Inside setAppServer-- Initializing Server\n");
+
+    address.addr = TOS_NODE_ID;
+    address.port = 41 ;// port;
+
+    if(call Transport.bind(fd, &address) == SUCCESS && call Transport.listen(fd) == SUCCESS){
+      dbg(TRANSPORT_CHANNEL, "Socket %d is Listening.\n", fd);
+      //call acceptTimer.startOneShot(30000);
+    }
+    else
+      dbg(TRANSPORT_CHANNEL, "Unable to set socket %d.\n", fd);
+
+   }// End setAppServer
+   */
 
    event void CommandHandler.setAppClient(char* username){
       pack client;
