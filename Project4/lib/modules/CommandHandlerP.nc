@@ -82,6 +82,26 @@ implementation{
                 dbg(COMMAND_CHANNEL, "Command Type:CLIENT_CLOSE.\n");
                 signal CommandHandler.ClientClose(buff[0], buff[1], buff[2], buff[3]);
                 break;
+            case CMD_APP_SERVER:
+                dbg(COMMAND_CHANNEL, "Command Type: APP_SERVER\n");
+                signal CommandHandler.setAppServer();
+                break;
+            case CMD_APP_CLIENT:
+                dbg(COMMAND_CHANNEL, "Command Type: APP_CLIENT\n");
+                signal CommandHandler.setAppClient(&buff[0]);
+                break;
+            case CMD_BROADCAST:
+                dbg(COMMAND_CHANNEL, "Command Type: BROADCAST\n");
+                signal CommandHandler.broadcast(&buff[0]);
+                break;
+            case CMD_UNICAST:
+                dbg(COMMAND_CHANNEL, "Command Type: UNICAST\n");
+                signal CommandHandler.unicast(&buff[0], &buff[1]);
+                break;
+            case CMD_LIST_USER:
+                dbg(COMMAND_CHANNEL, "Command Type: LIST_USER\n");
+                signal CommandHandler.list();
+                break;
 
             default:
                 dbg(COMMAND_CHANNEL, "CMD_ERROR: \"%d\" does not match any known commands.\n", msg->id);
