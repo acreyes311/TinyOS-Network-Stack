@@ -16,6 +16,11 @@ class TestSim:
     CMD_TEST_CLIENT = 4
     CMD_TEST_SERVER = 5
     CMD_CLIENT_CLOSE = 7
+    CMD_APP_SERVER = 10
+	CMD_APP_CLIENT = 11
+	CMD_BROADCAST_MESSAGE = 12
+	CMD_UNICAST_MESSAGE = 13
+	CMD_PRINT_USERS= 14
 
     # CHANNELS - see includes/channels.h
     COMMAND_CHANNEL="command";
@@ -146,6 +151,19 @@ class TestSim:
 
     def ClientClose(self, clientAddr, destination, srcPort, destPort):
         self.sendCMD(self.CMD_CLIENT_CLOSE, clientAddr, "{0}{1}{2}".format(chr(destination),chr(srcPort),destPort));
+    def AppServer(self, address):
+        self.sendCMD(self.CMD_APP_SERVER, address, "app server command");
+
+    def AppClient(self, address, username):
+        self.sendCMD(self.CMD_APP_CLIENT, address, "{0}".format(username));
+
+    def BroadcastMessage(self, address, message):
+        self.sendCMD(self.CMD_BROADCAST_MESSAGE, address, "{0}".format(message));
+
+    def UnicastMessage(self, client, dest, msg):
+        self.sendCMD(self.CMD_UNICAST_MESSAGE, client, "{0}{1}", format(dest, msg));
+    def printUsers():
+        self.sendCMD(self.CMD_PRINT_USERS, client, "list command");
 
 
 
@@ -175,17 +193,27 @@ def main():
     #s.routeDMP(9);
     #s.runTime(100);
 
-    s.TestServer(2,80);
-    s.runTime(100);
+    #s.TestServer(2,80);
+    #s.runTime(100);
     
-    s.TestClient(3,64,60,2,128);
-    s.runTime(100);
+    #s.TestClient(3,64,60,2,128);
+    #s.runTime(100);
 
-    s.ClientClose(3,64,60,2);
-    s.runTime(100);
+    #s.ClientClose(3,64,60,2);
+    #s.runTime(100);
 
     # s.ping(4, 6, "Hi!!! 4-6");
     # s.runTime(100);
+    
+    s.AppServer(1);
+    s.runTime(15);
+
+    s.AppClient(19, "TEST\r\n");
+    s.runTime(15);
+
+    s.BroadcastMessage(9, "HELLO\r\n");
+    s.runTime(15);
+
 
 
     #s.moteOff(7); #turns off node 7
