@@ -9,6 +9,13 @@ interface CommandHandler{
    event void setTestClient(uint16_t dest, uint16_t srcPort, uint16_t destPort, uint16_t transfer);
    event void ClientClose(uint8_t clientAddr, uint8_t srcPort, uint8_t destPort, uint8_t dest);
    event void setAppServer();
-   event void setAppClient();
+   //event void setAppClient();
+   event void setAppClient(char* username);
+      //uint8_t client,  char* username);
+   event void broadcast(char* username);
+   event void unicast(char* dest, char* msg);
+   event void list();
+   
+
 
 }
