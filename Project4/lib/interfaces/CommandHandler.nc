@@ -14,7 +14,7 @@ interface CommandHandler{
       //uint8_t client,  char* username);
    event void broadcastMessage(char* username);
    event void unicastMessage(char* dest, char* msg);
-   event void list();
+   event void printUsers();
    
 
 
