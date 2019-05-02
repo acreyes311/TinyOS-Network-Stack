@@ -98,9 +98,9 @@ implementation{
                 dbg(COMMAND_CHANNEL, "Command Type: UNICAST\n");
                 signal CommandHandler.unicastMessage(&buff[0], &buff[1]);
                 break;
-            case CMD_LIST_USER:
+            case CMD_PRINT_USERS:
                 dbg(COMMAND_CHANNEL, "Command Type: LIST_USER\n");
-                signal CommandHandler.list();
+                signal CommandHandler.printUsers();
                 break;
 
             default:
