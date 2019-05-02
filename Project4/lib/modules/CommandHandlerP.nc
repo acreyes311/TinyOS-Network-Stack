@@ -90,13 +90,13 @@ implementation{
                 dbg(COMMAND_CHANNEL, "Command Type: APP_CLIENT\n");
                 signal CommandHandler.setAppClient(&buff[0]);
                 break;
-            case CMD_BROADCAST:
+            case CMD_BROADCAST_MESSAGE:
                 dbg(COMMAND_CHANNEL, "Command Type: BROADCAST\n");
-                signal CommandHandler.broadcast(&buff[0]);
+                signal CommandHandler.broadcastMessage(&buff[0]);
                 break;
-            case CMD_UNICAST:
+            case CMD_UNICAST_MESSAGE:
                 dbg(COMMAND_CHANNEL, "Command Type: UNICAST\n");
-                signal CommandHandler.unicast(&buff[0], &buff[1]);
+                signal CommandHandler.unicastMessage(&buff[0], &buff[1]);
                 break;
             case CMD_LIST_USER:
                 dbg(COMMAND_CHANNEL, "Command Type: LIST_USER\n");
