@@ -764,25 +764,7 @@ implementation{
       dbg(TRANSPORT_CHANNEL, "Client Closed.\n");
 
     }
-  
 
-  // Setup server to port 41 node id 1 per project spec
-   /*event void CommandHandler.setAppServer(uint8_t clientport, char* username){
-    // Sockets
-    socket_addr_t address;
-    socket_t fd;
-    //Update Sockets
-    fd = call Transport.socket();
-    address.addr = TOS_NODE_ID;
-    address.port = 41;
-    if(call Transport.bind(fd,&address) == SUCCESS && call Transport.listen(fd) == SUCCESS)
-      dbg(TRANSPORT_CHANNEL,"Socket %d is now Listening.\n",fd);
-    else
-      dbg(TRANSPORT_CHANNEL,"Unable to setAppServer.\n");
-    // CONNECT USER/CLIENT BELOW OR DO setAppClient()
-   }
-   */
-   
   event void CommandHandler.setAppServer(){
     socket_addr_t address;
     //socket_t fd;  // global fd up top
@@ -925,7 +907,7 @@ implementation{
     pack SynAckPack;
 
     receivedSocket = myMsg->payload;
-    //tempAddr = receivedSocket->dest;
+    tempAddr = receivedSocket->dest;
 
 
     // ------------------ CHANGE TO SWITCH TO HANDLE 3-WAY HANDSHAKE ---------------
@@ -944,9 +926,7 @@ implementation{
         
         call Transport.setSocket(tempSocket.fd, tempSocket);//update socketlist
 
-        //Make our SYN_ACK
-        //makePack(&SynAckPack, TOS_NODE_ID, myMsg->src, myMsg->TTL, PROTOCOL_TCP, myMsg->seq, &tempSocket, (uint8_t)sizeof(tempSocket));
-        
+        //Make our SYN_ACK       
         SynAckPack.dest = myMsg->src;
         SynAckPack.src = TOS_NODE_ID;
         SynAckPack.seq = myMsg->seq + 1;
@@ -1107,7 +1087,7 @@ implementation{
         pack DATA_ACK;
         //Length of buffer same as value of lastWritten index in buffer
         //uint16_t bufferLength = SOCKET_BUFFER_SIZE;
-        uint16_t bufferLength = 16;
+        uint16_t bufferLength = 10;
 
         //for(i = 0; i < bufferLength; i++)
           //dbg(TRANSPORT_CHANNEL,"print sendbuff in clientsocket. Index %d value %d\n",i,receivedSocket->sendBuff[i]);
@@ -1196,6 +1176,64 @@ implementation{
         }
         return;
       }//end flag = 6
+
+      // flag = 7 Syn packet from chat client
+      if(receivedSocket->flag == 7 && tempAddr.addr == TOS_NODE_ID){
+        pack SYN_ACK;
+        dbg(TRANSPORT_CHANNEL,"SYN from APP client received.\n");
+
+        //Update socket state
+        tempSocket = call Socketlist.get(i);
+        tempSocket.flag = 8;
+        tempSocket.src = myMsg->src;
+        tempSocket.dest.port = receivedSocket->src;
+        tempSocket.dest.addr = myMsg->src;
+
+        // Make SYN_ACK packet
+        SYN_ACK.src = TOS_NODE_ID;
+        SYN_ACK.dest = myMsg->src;
+        SYN_ACK.seq = myMsg->seq + 1;
+        SYN_ACK.TTL = myMsg->TTL;
+        SYN_ACK.protocol = PROTOCOL_TCP;
+
+        memcpy(SYN_ACK.payload, &tempSocket, (uint8_t)sizeof(tempSocket));
+
+        // Get Our Next Destination
+        for(j = 0; j < call Confirmed.size();j++){
+          dest = call Confirmed.get(j);
+          if (SYN_ACK.dest == dest.node){
+            next = dest.nextHop;
+          }
+        }  
+
+        // Push Socket into List
+        while(!call Socketlist.isEmpty()){
+          tempSocket = call Socketlist.front();
+          call Socketlist.popfront();
+
+          if(tempSocket.fd == i){
+            tempSocket.state = SYN_RCVD;
+            tempSocket.dest.addr = myMsg->src;
+            call modSockets.pushfront(tempSocket);
+          }//end if
+          else {
+            call modSockets.pushfront(tempSocket);
+          }//end else
+        }// end While
+        
+        while(!call modSockets.isEmpty()){
+          call Socketlist.pushfront(call modSockets.front());
+          call modSockets.popfront();
+        }
+        dbg(TRANSPORT_CHANNEL,"Replying SYN_ACK.\n");
+        call Sender.send(SYN_ACK, next);
+        return;
+      }// END flag = 7
+
+      //Flag = 8 SynAck receive and Reply
+      if(receivedSocket->flag == 8){
+
+        }// End flag = 8
     }//end for
 
   }// End TCPProtocol
