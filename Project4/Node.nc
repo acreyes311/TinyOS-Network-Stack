@@ -701,7 +701,7 @@ implementation{
 
     TimeSent = call LocalTime.get();  
       //TimeSent = call LocalTime.getNow();
-    if(call Transport.connect(fd,&serverAdr) == SUCCESS){
+    if(call Transport.connect(fd,&serverAdr,1) == SUCCESS){
       //call writtenTimer.startOneShot(15000);
       dbg(TRANSPORT_CHANNEL,"Transport.connect SUCCESS\n");
     }
@@ -766,27 +766,24 @@ implementation{
     }
   
 
-    // Setup server to port 41 node id 1 per project spec
+  // Setup server to port 41 node id 1 per project spec
    /*event void CommandHandler.setAppServer(uint8_t clientport, char* username){
     // Sockets
     socket_addr_t address;
     socket_t fd;
-
     //Update Sockets
     fd = call Transport.socket();
     address.addr = TOS_NODE_ID;
     address.port = 41;
-
     if(call Transport.bind(fd,&address) == SUCCESS && call Transport.listen(fd) == SUCCESS)
       dbg(TRANSPORT_CHANNEL,"Socket %d is now Listening.\n",fd);
     else
       dbg(TRANSPORT_CHANNEL,"Unable to setAppServer.\n");
-
     // CONNECT USER/CLIENT BELOW OR DO setAppClient()
    }
    */
    
-      event void CommandHandler.setAppServer(){
+  event void CommandHandler.setAppServer(){
     socket_addr_t address;
     //socket_t fd;  // global fd up top
 
@@ -807,14 +804,14 @@ implementation{
    }// End setAppServer
    
 
-   event void CommandHandler.setAppClient(char* username){
-      pack client;
+  event void CommandHandler.setAppClient(char* username){
+    pack client;
     bool end =FALSE;
     uint8_t i =0;
     socket_addr_t address;
     socket_addr_t serveraddress;
      fd = call Transport.socket();
-     dbg(GENERAL_CHANNEL, "Inside setAppServer-- Initializing CLIENT\n");
+     dbg(GENERAL_CHANNEL, "Inside setAppClient-- Initializing CLIENT\n");
      address.addr = TOS_NODE_ID;
      serveraddress.port= 41;
      serveraddress.addr= 1;
@@ -834,10 +831,11 @@ implementation{
      }
 
     if(call Transport.bind(fd, &address) == SUCCESS){
-        dbg(TRANSPORT_CHANNEL, "Test app client\n");
-     // call Transport.connectuser(fd, &serveraddress);
+        dbg(TRANSPORT_CHANNEL, "setAppClient Bind Successful\n");
+        if(call Transport.connect(fd, &serveraddress,7) == SUCCESS)
+          dbg(TRANSPORT_CHANNEL,"setAppClient Connect Successful\n");
     }
-   }
+   }// End setAppClient
 
    // receie through injected packets.
    // Once server receives message broadcast to all connected clients
@@ -898,7 +896,7 @@ implementation{
    // vancu-AppPrint
    event void CommandHandler.printUsers(){
       printf("print users\n");
-   }
+}
 
    // ----------- Project 3 TCP PROTOCOL-------------
   // Iterate through list and find index that has Socket with matching port. Then Check Flag

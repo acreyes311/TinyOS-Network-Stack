@@ -151,6 +151,7 @@ class TestSim:
 
     def ClientClose(self, clientAddr, destination, srcPort, destPort):
         self.sendCMD(self.CMD_CLIENT_CLOSE, clientAddr, "{0}{1}{2}".format(chr(destination),chr(srcPort),destPort));
+
     def AppServer(self, address):
         self.sendCMD(self.CMD_APP_SERVER, address, "app server command");
 
@@ -166,12 +167,15 @@ class TestSim:
         self.sendCMD(self.CMD_PRINT_USERS, client, "list command");
 
 
-
 def main():
     s = TestSim();
     s.runTime(20);
     #s.loadTopo("long_line.topo");
+    #s.loadTopo("house.topo");
+    #s.loadTopo("pizza.topo");
     s.loadTopo("ring.topo");
+    #s.loadNoise("some_noise.txt");
+    #s.loadNoise("meyer-heavy.txt");
     s.loadNoise("no_noise.txt");
     s.bootAll();
     s.addChannel(s.COMMAND_CHANNEL);
@@ -182,7 +186,7 @@ def main():
     s.addChannel(s.TRANSPORT_CHANNEL); # project 3
 
     s.runTime(500);
-    s.ping(5,8,"Hello, World, 5-8");
+    s.ping(5,7,"Hello, World, 5-7");
     s.runTime(200);
     #s.ping(3, 9, "Hi!!! 3-9");
     #s.runTime(100);
@@ -193,27 +197,27 @@ def main():
     #s.routeDMP(9);
     #s.runTime(100);
 
-    #s.TestServer(2,80);
-    #s.runTime(100);
+    # s.TestServer(2,80);
+    # s.runTime(100);
     
-    #s.TestClient(3,64,60,2,128);
-    #s.runTime(100);
 
-    #s.ClientClose(3,64,60,2);
-    #s.runTime(100);
+    # s.TestClient(3,64,60,2,128);
+    # s.runTime(100);
+
+    # s.ClientClose(3,64,60,2);
+    # s.runTime(100);
+
+    s.AppServer(1);
+    s.runTime(100);
+
+    s.AppClient(2, "TEST\r\n");
+    s.runTime(100);
+
+    s.BroadcastMessage(9, "HELLO\r\n");
+    s.runTime(100);
 
     # s.ping(4, 6, "Hi!!! 4-6");
     # s.runTime(100);
-    
-    s.AppServer(1);
-    s.runTime(15);
-
-    s.AppClient(19, "TEST\r\n");
-    s.runTime(15);
-
-    s.BroadcastMessage(9, "HELLO\r\n");
-    s.runTime(15);
-
 
 
     #s.moteOff(7); #turns off node 7

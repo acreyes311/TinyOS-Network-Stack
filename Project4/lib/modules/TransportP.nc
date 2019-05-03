@@ -570,7 +570,7 @@ implementation {
     // Make socket_store_t truct and update with SYN, dest port and dest addr.
     // Struct is now payload to be added to a packet with src TOS_NODE_ID, dest: addr->addr
     // Iterate through route table to find next node.
-   command error_t Transport.connect(socket_t fd, socket_addr_t * addr) {
+   command error_t Transport.connect(socket_t fd, socket_addr_t * addr, uint8_t connection) {
 
     socket_store_t temp,temp2;
     pack SYN;
@@ -588,7 +588,12 @@ implementation {
     //temp = call SocketList.get(fd);
     temp.dest.port = addr->port;
     temp.dest.addr = addr->addr;
-    temp.flag = 1;
+
+    //If the connection type = 1 send out TCP flag 1.  Else its a application connection
+    if(connection == 1)
+        temp.flag = 1;
+    else
+        temp.flag = 7;
 
 
     // update info in list
@@ -618,7 +623,7 @@ implementation {
             nh = lsdest.nextHop;
             flag = TRUE;
     }
-    dbg(TRANSPORT_CHANNEL, "SYN packet being sent to nextHop %d, intended for Node %d.\n",nh,addr->addr);
+    dbg(TRANSPORT_CHANNEL, "SYN packet being sent to nextHop %d, intended for Node %d, with flag: %d.\n",nh,addr->addr,temp.flag);
     call Sender.send(SYN,nh);
     if(flag == TRUE)
         return SUCCESS;

@@ -113,7 +113,7 @@ interface Transport{
     * @return socket_t - returns SUCCESS if you are able to attempt
     *    a connection with the fd passed, else return FAIL.
     */
-   command error_t connect(socket_t fd, socket_addr_t * addr);
+   command error_t connect(socket_t fd, socket_addr_t * addr, uint8_t connection);
 
    /**
     * Closes the socket.
