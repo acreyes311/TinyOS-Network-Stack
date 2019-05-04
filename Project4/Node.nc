@@ -1229,11 +1229,133 @@ implementation{
         call Sender.send(SYN_ACK, next);
         return;
       }// END flag = 7
-
-      //Flag = 8 SynAck receive and Reply
+        //Flag = 8 SynAck receive and Reply
       if(receivedSocket->flag == 8){
+        char transferArray [globalTransfer + 1];
+        uint16_t sz;
+
+        pack SYN_RCVD;
+        dbg(TRANSPORT_CHANNEL,"SYN pacet received.---flag 8\n");
+        tempSocket = call Socketlist.get(i);
+        tempSocket.flag = 9;
+        tempSocket.src = myMsg->src;
+        tempSocket.dest.port = receivedSocket->src;
+        tempSocket.dest.addr = myMsg->src;
+
+        SYN_RCVD.src = TOS_NODE_ID;
+        SYN_RCVD.dest = myMsg->src;
+        SYN_RCVD.seq = myMsg->seq + 1;
+        SYN_RCVD.TTL = myMsg->TTL; // or mAX_TTL
+        SYN_RCVD.protocol = PROTOCOL_TCP;
+
+       memcpy(SYN_RCVD.payload, &tempSocket, (uint8_t)sizeof(tempSocket));
+
+
+        for(j = 0; j < call Confirmed.size();j++){
+          dest = call Confirmed.get(j);
+          if (SYN_RCVD.dest == dest.node){
+            next = dest.nextHop;
+          }
+        }  
+
+        // Push Socket into List
+        while(!call Socketlist.isEmpty()){
+          tempSocket = call Socketlist.front();
+          call Socketlist.popfront();
+
+          if(tempSocket.fd == i){
+            tempSocket.state = ESTABLISHED;
+            tempSocket.dest.addr = myMsg->src;
+            call modSockets.pushfront(tempSocket);
+          }//end if
+          else {
+            call modSockets.pushfront(tempSocket);
+          }//end else
+        }// end While
+        
+        while(!call modSockets.isEmpty()){
+          call Socketlist.pushfront(call modSockets.front());
+          call modSockets.popfront();
+        }
+         call Sender.send(SYN_RCVD, next);
+        /*
+        for(i = 0; i < globalTransfer; i++){
+          transferArray[i] = user[i];
+        }
+
+        sz = call Transport.write(tempSocket.fd,transferArray,globalTransfer, receivedSocket->flag);
+        */
+        return;
 
         }// End flag = 8
+        //ACK
+      if(receivedSocket->flag == 9){
+        //Copy from flag 4
+       /*pack DATA_ACK;
+        //Length of buffer same as value of lastWritten index in buffer
+        //uint16_t bufferLength = SOCKET_BUFFER_SIZE;
+        uint16_t bufferLength = 10;
+
+        //for(i = 0; i < bufferLength; i++)
+          //dbg(TRANSPORT_CHANNEL,"print sendbuff in clientsocket. Index %d value %d\n",i,receivedSocket->sendBuff[i]);
+
+        //Read the buffer from the DATA packet.
+        call Transport.read(receivedSocket->fd,receivedSocket->sendBuff, bufferLength);
+        dbg(TRANSPORT_CHANNEL,"Finished flag4.read().\n");
+
+        //update state of socket
+        tempSocket.flag = 10;
+        tempSocket.nextExpected = bufferLength + 1;
+
+        //Set Socket in Transport
+       // call Transport.setSocket(tempSocket.fd, tempSocket);
+
+        //Make DATA_ACK PACK
+        DATA_ACK.dest = myMsg->src;
+        DATA_ACK.src = TOS_NODE_ID;
+        DATA_ACK.seq = myMsg->seq+1;
+        DATA_ACK.TTL = myMsg->TTL;
+        DATA_ACK.protocol = PROTOCOL_TCP;
+
+        memcpy(DATA_ACK.payload, &tempSocket,(uint8_t)sizeof(tempSocket));
+      
+        dbg(TRANSPORT_CHANNEL,"DATA has been received and sending out DATA_ACK.\n");
+
+        // Get Destination
+        for(j = 0; j < call Confirmed.size();j++){
+          dest = call Confirmed.get(j);
+          if (DATA_ACK.dest == dest.node){
+            next = dest.nextHop;
+          }
+        }//end j for  
+
+        // Add to Socket List
+        while(!call Socketlist.isEmpty()){
+          tempSocket = call Socketlist.front();
+          call Socketlist.popfront();
+
+          if(tempSocket.fd == i){
+            tempSocket.lastAck = bufferLength + 1;
+            call modSockets.pushfront(tempSocket);
+          }//end if
+          else {
+            call modSockets.pushfront(tempSocket);
+          }//end else
+        }// end While
+        
+        while(!call modSockets.isEmpty()){
+          call Socketlist.pushfront(call modSockets.front());
+          call modSockets.popfront();
+        }
+
+        call Sender.send(DATA_ACK, next);
+        return;
+        */
+      }// flag 9
+       if(receivedSocket->flag == 10){
+
+       }
+    
     }//end for
 
   }// End TCPProtocol
