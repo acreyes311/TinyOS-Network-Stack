@@ -1298,7 +1298,7 @@ implementation{
         for(i = 0; i < globalTransfer; i++){
           transferArray[i] = i;
         }
-        dbg(TRANSPORT_CHANNEL," ------------------- GT is:%d \n",globalTransfer);  // WHY 0 HERE?
+        dbg(TRANSPORT_CHANNEL," ------------------- Flag 9 GT is:%d \n",globalTransfer);  // WHY 0 HERE?
       dbg(TRANSPORT_CHANNEL,"Received ACK. APP 3-Way Handshake Complete!.\n");
 
         sz = call Transport.write(tempSocket.fd,transferArray,globalTransfer,receivedSocket->flag);
