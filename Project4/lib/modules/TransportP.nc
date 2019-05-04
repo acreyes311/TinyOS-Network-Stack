@@ -277,10 +277,10 @@ implementation {
         }
         else{
             temp = call SocketList.get(ind);
-            dbg(TRANSPORT_CHANNEL,"INSIDE write ELSE ---\n");
+            //dbg(TRANSPORT_CHANNEL,"INSIDE write ELSE ---\n");
             // First case
             if(bufflen > 0){
-                dbg(TRANSPORT_CHANNEL,"INSIDE BUFFLEN > 0\n");
+                //dbg(TRANSPORT_CHANNEL,"INSIDE BUFFLEN > 0\n");
                 temp.lastWritten =  0;
                 temp.lastAck = 0;
                 temp.lastSent = 0;
@@ -295,7 +295,7 @@ implementation {
 
                 j = temp.lastSent;
 
-                dbg(TRANSPORT_CHANNEL,"BEFORE WRITE BUFFER\n");
+               // dbg(TRANSPORT_CHANNEL,"BEFORE WRITE BUFFER\n");
                 // WRITE TO BUFFER
                 for(i = 0; i < buffEnd; i++){
                     printf("%c",buff[j]);
@@ -329,7 +329,7 @@ implementation {
                 else
                     temp.flag = 0; // needed?
 
-                dbg(TRANSPORT_CHANNEL,"IN WRITE AFTER FLAG SET. FLAG IS: \n", temp.flag);    
+                dbg(TRANSPORT_CHANNEL,"IN WRITE AFTER FLAG SET. FLAG IS:%d \n", temp.flag);    
 
                 Data.seq = i;
                 lastAckd = temp.lastAck;
@@ -413,6 +413,7 @@ implementation {
                 Data.TTL = MAX_TTL;
                 Data.seq = i;
                 memcpy(Data.payload, &temp, (uint8_t)sizeof(temp));
+                
                 // get desination
                 for(i = 0; i < call ConfirmedList.size(); i++){
                     ls = call ConfirmedList.get(i);

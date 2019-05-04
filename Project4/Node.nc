@@ -161,12 +161,6 @@ implementation{
         temp = call Neighbors.get(i);
         temp.life = temp.life + 1;
         pings = temp.life;
-        //call Neighbors.remove(i);
-        //call Neighbors.pushback(line);
-      
-      //for (i = 0; i < size; i++) {
-       // temp = call Neighbors.get(i);
-        //life = temp.life;
 
         // Drop expired neighbors after 7 pings and put in DroppedList
         if (pings > 7) {
@@ -204,7 +198,7 @@ implementation{
    }
 
    
-   
+  
 //based on Psuedocode
    //timer fired
     //  int newFd = accept();
@@ -240,25 +234,7 @@ implementation{
         dbg(TRANSPORT_CHANNEL, "socket is null");
      }
      
-      /*
-      for(i = 0; i < call Socketlist.size(); i++){
-        temp = call Socketlist.get(i);
 
-        if(temp.fd == fd && !found){
-          found = TRUE;
-          ind = i;
-        }// end if
-      }//end for
-
-      if(found){
-        temp = call Socketlist.get(ind);
-        avail = call Transport.read(temp.fd,0,temp.lastWritten);
-        dbg(TRANSPORT_CHANNEL,"Read Amount avail %d\n",avail);
-      }// End if
-      else{
-         dbg(TRANSPORT_CHANNEL,"NOT FOUND --------\n");
-      }
-    */
 
     }// End acceptTimer()
 
@@ -1287,13 +1263,16 @@ implementation{
 
         sz = call Transport.write(tempSocket.fd,transferArray,globalTransfer, receivedSocket->flag);
         */
+
         return;
 
         }// End flag = 8
         //ACK
       if(receivedSocket->flag == 9){
-        uint8_t transferArray [globalTransfer + 1];
+
+        uint8_t transferArray [6 + 1];
         uint16_t sz;
+        globalTransfer = 6;
 
         for(i = 0; i < globalTransfer; i++){
           transferArray[i] = i;
