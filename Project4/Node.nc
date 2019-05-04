@@ -43,6 +43,13 @@ typedef struct LinkState {
     //bool isValid;
     }LinkState;
 
+// Project 4
+// Simple struct for our chat client
+typedef struct appplication{
+    char username[50];
+    bool inuse;
+  }application;
+
 
 module Node{
    uses interface Boot;
@@ -96,7 +103,8 @@ implementation{
    uint32_t TimeSent;
    uint16_t globalTransfer = 0;
    uint32_t estimateRTT;
-   char user[25];
+   char user[50];
+   application app[20];
 
    // Prototypes
    bool isKnown(pack *p);  // already seen function
@@ -501,20 +509,7 @@ implementation{
                   nextHop = dest.nextHop;
                 }
                }
-               /*
-               for (n = 0; n < call Confirmed.size(); n++){
-                dest = call Confirmed.get(n);
-                if(myMsg->src == dest.node){
-                  makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, seqNumber, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
-                  insertPack(sendPackage);
-                  call Sender.send(sendPackage, dest.nextHop);
-                  break;
-                  //nextHop = dest.nextHop;
-                }
-               }
-               */
-               // Send new packet
-               //dbg(ROUTING_CHANNEL,"pack for %d, sending to %d\n",myMsg->src, nextHop);
+
                call Sender.send(sendPackage, nextHop); // Send to nextHop
                //call Sender.send(sendPackage, AM_BROADCAST_ADDR);               
           }// End else if prot == PROT_PING
@@ -525,7 +520,27 @@ implementation{
         }
         else if(myMsg->protocol == PROTOCOL_TCP && myMsg->dest == TOS_NODE_ID){
               TCPProtocol(myMsg);
-        } 
+        }
+        else if(myMsg->protocol == PROTOCOL_TCP_USER && myMsg->dest == TOS_NODE_ID){
+          int i = 0;
+          dbg(TRANSPORT_CHANNEL,"USERNAME Received: ");
+
+          while(TRUE){
+            if(myMsg->payload[i] == '\n'){
+              app[myMsg->src].username[i] = myMsg->payload[i];
+              printf("%c", app[myMsg->src].username[i]);
+              i++;
+              break;
+            }
+            else{
+              app[myMsg->src].username[i] = myMsg->payload[i];
+              printf("%c", app[myMsg->src].username[i]);
+              i++;
+            }
+          }//end while
+          app[myMsg->src].inuse = TRUE;
+          return msg;
+        }// end PROTOCOL_TCP_USER 
 
          // Packet does not belong to current node 
          // Flood Packet with TTL - 1
@@ -1209,11 +1224,9 @@ implementation{
 
        //Flag = 8 SynAck receive and Reply
       if(receivedSocket->flag == 8){
-        //char transferArray [globalTransfer + 1];
-        //uint16_t sz;
 
         pack SYN_RCVD;
-        dbg(TRANSPORT_CHANNEL,"SYN pacet received.---flag 8\n");
+        dbg(TRANSPORT_CHANNEL,"SYN_ACK received. Connection Established!. Send Username.\n");
         tempSocket = call Socketlist.get(i);
         tempSocket.flag = 9;
         tempSocket.src = myMsg->src;
@@ -1222,11 +1235,11 @@ implementation{
 
         SYN_RCVD.src = TOS_NODE_ID;
         SYN_RCVD.dest = myMsg->src;
-        SYN_RCVD.seq = myMsg->seq + 1;
+        SYN_RCVD.seq = 1;
         SYN_RCVD.TTL = myMsg->TTL; // or mAX_TTL
-        SYN_RCVD.protocol = PROTOCOL_TCP;
+        SYN_RCVD.protocol = PROTOCOL_TCP_USER;
 
-       memcpy(SYN_RCVD.payload, &tempSocket, (uint8_t)sizeof(tempSocket));
+       memcpy(SYN_RCVD.payload, &user, (uint8_t)sizeof(user));
 
 
         for(j = 0; j < call Confirmed.size();j++){

@@ -210,7 +210,7 @@ def main():
     s.AppServer(1);
     s.runTime(100);
 
-    s.AppClient(2, "TEST\r\n");
+    s.AppClient(2, "whehdwns\r\n");
     s.runTime(100);
 
     s.BroadcastMessage(9, "HELLO\r\n");
