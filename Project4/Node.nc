@@ -521,6 +521,7 @@ implementation{
         else if(myMsg->protocol == PROTOCOL_TCP && myMsg->dest == TOS_NODE_ID){
               TCPProtocol(myMsg);
         }
+
         else if(myMsg->protocol == PROTOCOL_TCP_USER && myMsg->dest == TOS_NODE_ID){
           int i = 0;
           dbg(TRANSPORT_CHANNEL,"USERNAME Received: ");
@@ -541,7 +542,82 @@ implementation{
           app[myMsg->src].inuse = TRUE;
           return msg;
         }// end PROTOCOL_TCP_USER 
+        /*
+        else if(myMsg->protocol == PROTOCOL_TCP_MSG && myMsg->dest == TOS_NODE_ID){
+          pack packet;
+          int i;
+          char appMsg[25];
+          dbg(TRANSPORT_CHANNEL,"Received Message from appClient: ");
 
+          while(TRUE){
+            if(myMsg->payload[i] == '\n'){
+              
+              printf("%c", app[myMsg->src].username[i]);
+              i++;
+              break;
+            }
+            else{
+             
+              printf("%c", app[myMsg->src].username[i]);
+              i++;
+            }
+          }// End while
+          dbg(TRANSPORT_CHANNEL,"Message: ");
+          i = 0;
+
+          while(TRUE){
+            if(myMsg->payload[i] == '\n'){
+              appMsg[i] = myMsg->payload[i];
+              printf("%c", myMsg->payload[i]);
+              i++;
+              break;
+            }
+            else{
+              appMsg[i] = myMsg->payload[i];
+              printf("%c", myMsg->payload[i]);
+              i++;
+            }
+          }// end while
+
+          dbg(TRANSPORT_CHANNEL,"Broadcast message to clients.\n");
+
+          for(i = 0; i < 10; i++){
+            if(app[i].inuse == TRUE){
+              packet.src = TOS_NODE_ID;
+              packet.dest = i;
+              packet.seq = 1;
+              packet.TTL = MAX_TTL;
+              packet.protocol = PROTOCOL_TCP_MSG_CLIENT;
+
+              memcpy(packet.payload, &appMsg, (uint8_t)sizeof(appMsg));
+
+              // send out username
+              call Sender.send(packet,i);
+            }//end if
+          }//end for
+          return msg;
+        }// End PROTOCOL_TCP_MSG
+
+        else if(myMsg->protocol == PROTOCOL_TCP_MSG_CLIENT && myMsg->dest == TOS_NODE_ID){
+          int i = 0;
+
+          dbg(TRANSPORT_CHANNEL,"Message received from server.\n");
+
+          dbg(TRANSPORT_CHANNEL,"Message: ");
+
+          while(TRUE){
+            if(myMsg->payload[i] == '\n'){              
+              printf("%c", myMsg->payload[i]);
+              i++;
+              break;
+            }
+            else{             
+              printf("%c", myMsg->payload[i]);
+              i++;
+            }
+          }
+        }// End PROTOCOL_TCP_MSG_CLIENT
+    */
          // Packet does not belong to current node 
          // Flood Packet with TTL - 1
          // broadcast to neighbors
