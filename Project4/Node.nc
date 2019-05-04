@@ -290,7 +290,7 @@ implementation{
       if(found== TRUE){
         temp = call Socketlist.get(ind);
         while(globalTransfer > 0){
-          avail = call Transport.write(fd,0,globalTransfer);
+          avail = call Transport.write(fd,0,globalTransfer,1);
           globalTransfer = globalTransfer - avail;  // Is this done in write()?
           dbg(TRANSPORT_CHANNEL,"written Amount avail %d and globalTransfer %d\n",avail,globalTransfer);
         }//end while
@@ -1054,7 +1054,7 @@ implementation{
 
       dbg(TRANSPORT_CHANNEL,"Received ACK 3-Way Handshake Complete!.\n");
 
-        sz = call Transport.write(tempSocket.fd,transferArray,globalTransfer);
+        sz = call Transport.write(tempSocket.fd,transferArray,globalTransfer,receivedSocket->flag);
         //globalTransfer = globalTransfer - sz;
 
         //Insert into socket list

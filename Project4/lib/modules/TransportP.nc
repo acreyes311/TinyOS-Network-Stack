@@ -237,74 +237,205 @@ implementation {
     //Asks client to send more data
     //Return how much data the server was able to read from buff, send from Client sendBuff(written to Servers rcvdBuff).
 
-    /*
-    command uint16_t Transport.write(socket_t fd, uint8_t *buff, uint16_t bufflen) {
+    
+    command uint16_t Transport.write(socket_t fd, uint8_t *buff, uint16_t bufflen, uint8_t flag) {
         socket_store_t temp;
-        uint8_t buffInd, buffLimit, last,next;
-        int i;
-        uint16_t writeable = 0;
-        LinkState ls;
         pack Data;
+        char sendLimit[8];
+        char sendBuff[SOCKET_BUFFER_SIZE];
+        uint16_t length = call SocketList.size();
+        int i,j, ind, count,buffercount;
+        LinkState ls;
+        uint16_t next;
         bool found = FALSE;
+        uint8_t msg[10];
+        uint8_t avail, buffEnd, lastAckd, snd;  // buffer index
+        socket_store_t tempSocket;
+        dbg(TRANSPORT_CHANNEL,"Node %d with flag %d, write()",TOS_NODE_ID, flag);
 
         Data.src = TOS_NODE_ID;
         Data.protocol = PROTOCOL_TCP;
 
-        while(!call SocketList.isEmpty()){
-            temp = call SocketList.popfront();
+        for(i = 0; i < 8; i++)
+            sendLimit[i] = '\0'; // = 255
 
-            //find socket and write to server send buffer
-            if(temp.fd == fd && !found){
-               // call SocketList.popfront(); // Again?
+        for(i = 0; i < SOCKET_BUFFER_SIZE; i++)
+            sendBuff[i] = '\0'; // = 255
 
-                if(bufflen > (SOCKET_BUFFER_SIZE - temp.lastWritten)){
-                    buffInd = SOCKET_BUFFER_SIZE - temp.lastWritten;
-                }   // End if
+        for(i = 0; i < length; i++){
+            temp = call SocketList.get(i);
+            if(fd == temp.fd && found == FALSE){
+                ind = i;    // set temp here ?
+                found = TRUE;
+            } // end if
+            msg[i] = temp.dest.addr;
+            count++;
+        }// end for
+        if(found == FALSE)
+            return 0;
+        else{
+            temp = call SocketList.get(ind);
+            // First case
+            if(bufflen > 0){
+                temp.lastWritten =  0;
+                temp.lastAck = 0;
+                temp.lastSent = 0;
+
+                if(bufflen > SOCKET_BUFFER_SIZE)
+                    avail = SOCKET_BUFFER_SIZE;
+                // Write whole buffer into socket
                 else
-                buffInd = bufflen;
+                    avail = bufflen;
 
-                last = temp.lastSent;
+                buffEnd = temp.lastWritten + avail;
+                j = temp.lastSent;
 
-                //Write data from buff into received buff. Starting from temp lastwritten
-                for(i = 0; i < (temp.lastWritten + buffInd); i++){
-                    temp.sendBuff[i] = last;
-                    writeable++;
-                    last++;
-                } // End for
+                // WRITE TO BUFFER
+                for(i = 0; i < buffEnd; i++){
+                    printf("%c",buff[j]);
+                    temp.sendBuff[i] = buff[j];
+                    j++;                    
+                }// end for
+                printf("\n");
 
-                // Update temp socket
-                temp.lastWritten = i;
-                temp.lastSent = last;
-                temp.flag = 4;
+                // Update lastWritten
+                temp.lastWritten = j;
 
-                // Make data packet
-                Data.TTL = MAX_TTL;
-                Data.seq = i;
+                //Update packet
                 Data.dest = temp.dest.addr;
-                memcpy(Data.payload, &temp,(uint8_t)sizeof(temp));
+                Data.TTL = MAX_TTL;
 
+                //Distinguish between our TCP flags
+                if(flag == 8)
+                    temp.flag = 9;
+
+                else if(flag == 11){
+                    for(i = 0; i < buffEnd; i++)
+                        printf("%c",temp.sendBuff[i]);
+                    temp.flag = 11; // 11 again?
+                }// end else if 11
+
+                // Unicast
+                else if(flag == 13)
+                    temp.flag = 13;
+
+                // else not app data    
+                else
+                    temp.flag = 0; // needed?
+
+                Data.seq = i;
+                lastAckd = temp.lastAck;
+                j = 0;
+
+                for(i = 0; i < 8; i++){
+                    if(temp.lastSent < SOCKET_BUFFER_SIZE){
+                        sendLimit[i] = buff[temp.lastSent];
+                        buffercount++;
+                    }
+                    else{
+                        j = i;
+                        break;
+                    }
+                    temp.lastSent++;
+                }// end for
+                temp.lastSent = buffercount;
+
+                for(i = 0; i < SOCKET_BUFFER_SIZE; i++)
+                    sendBuff[i] = temp.sendBuff[i];
+
+                for(i = 0; i < j; i++)
+                    temp.sendBuff[i] = sendLimit[i];
+
+                memcpy(Data.payload, &temp, (uint8_t)sizeof(temp));
+
+                // Find username and send
                 for(i = 0; i < call ConfirmedList.size(); i++){
                     ls = call ConfirmedList.get(i);
-                    if(ls.node == Data.dest){
+                    printf("confirm: %d\n", ls.node);
+                    if(Data.dest == ls.node)
                         next = ls.nextHop;
-                        break;
-                    }//end if
-                }// end for
+                } // end for
 
-                temp.lastWritten = 0;
+                while(!call SocketList.isEmpty()){
+                    tempSocket = call SocketList.front();
+                    if(temp.fd == tempSocket.fd)
+                        call socketTemp.pushfront(temp);
+                    else
+                        call socketTemp.pushfront(tempSocket);
 
-                found = TRUE;
+                    call  SocketList.popfront();
+                }// end while
+                while(!call socketTemp.isEmpty()){
+                    call SocketList.pushfront(call socketTemp.front());
+                    call socketTemp.popfront();
+                }// end while
 
-                call SocketList.pushback(temp);
                 call Sender.send(Data,next);
-                return writeable;
-            }
-            //return writeable;
-        }
-    }
-*/
+                return buffercount;
 
-    
+            }// end bufflen>0
+            else{
+                if(flag == 11)
+                    temp.flag = 11;
+                else if(flag == 13)
+                    temp.flag = 13;
+                else
+                    temp.flag = 0;
+
+                buffercount = 0;
+                lastAckd = temp.lastSent;
+
+                for(i = 0; i < 8; i++){
+                    if(temp.lastSent < temp.lastWritten && temp.lastSent < SOCKET_BUFFER_SIZE){
+                        sendLimit[i] = temp.sendBuff[temp.lastSent];
+                        snd = i + 1;
+                        temp.lastSent++;
+                    }
+                    else
+                        sendLimit[i] = '\0';
+                }// end for
+                // write buff
+                for(i = 0; i < 128; i++)
+                    sendBuff[i] = temp.sendBuff[i];
+                for (i = 0; i <= snd; i++)
+                    temp.sendBuff[i] = sendLimit[i];
+
+                //update packet
+                Data.dest = temp.dest.addr;
+                Data.TTL = MAX_TTL;
+                Data.seq = i;
+                memcpy(Data.payload, &temp, (uint8_t)sizeof(temp));
+                // get desination
+                for(i = 0; i < call ConfirmedList.size(); i++){
+                    ls = call ConfirmedList.get(i);
+                    if(Data.dest == ls.node)
+                        next = ls.nextHop;
+                }// end for 
+
+                // Update Socket List
+                while(!call SocketList.isEmpty()){
+                    tempSocket = call SocketList.front();
+                    if(temp.fd == tempSocket.fd)
+                        call socketTemp.pushfront(temp);
+                    else
+                        call socketTemp.pushfront(tempSocket);
+
+                    call  SocketList.popfront();
+                }// end while
+                while(!call socketTemp.isEmpty()){
+                    call SocketList.pushfront(call socketTemp.front());
+                    call socketTemp.popfront();
+                }// end while
+
+                call Sender.send(Data,next);
+                return snd;   
+            }
+        }//end else
+
+    } // END write()
+
+
+   /* 
    command uint16_t Transport.write(socket_t fd, uint8_t *buff, uint16_t bufflen) {
     socket_store_t temp;
     int i,j,lw;
@@ -381,7 +512,7 @@ implementation {
     return 0;   // Failed to write
     
    } // End of WRITE()
-  
+  */
 
    /**
     * This will pass the packet so you can handle it internally. 
