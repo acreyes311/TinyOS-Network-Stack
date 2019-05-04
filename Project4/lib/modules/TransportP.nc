@@ -548,7 +548,7 @@ implementation {
     // Then make packet andd send ACKs for each time it receives data.
     // Ask client to send more data
     // Return how much data the server was able to read from buffsent from Client sendBuff(written to Servers rcvdBuff)
-
+/*
    command uint16_t Transport.read(socket_t fd, uint8_t *buff, uint16_t bufflen) {
     socket_store_t temp, transferSocket;
     uint8_t buffInd,lastReceived,i;
@@ -636,55 +636,172 @@ implementation {
         return read;
     }
    }
+*/
+   
+   command uint16_t Transport.read(socket_t fd, uint8_t *buff, uint16_t bufflen, uint8_t flag) {
+    socket_store_t writeSocket, tempSocket;
+    pack packet;
+    uint16_t length = call SocketList.size();
+    int i, j, ind, buffercount, next;
+    LinkState ls;
+    uint8_t buffEnd, avail;
+    bool found = FALSE;
+    bool finished = FALSE;
+    bool inUse = FALSE;
+    char sendUser[SOCKET_BUFFER_SIZE];
+    char sendMsg[SOCKET_BUFFER_SIZE];
 
-   /* 
-   command uint16_t Transport.read(socket_t fd, uint8_t *buff, uint16_t bufflen) {
-        // *JF
-    int i,j,len;
-    int avail;  // space remaining
-    socket_store_t temp;
+    printf("Node %d, flag %d in Read()", TOS_NODE_ID, flag);
 
-
-    dbg(TRANSPORT_CHANNEL,"In Transport.read().\n");
-
-    //go through list and fid appropriate fd
-    for(i = 0; i < call SocketList.size(); i++){
-        temp = call SocketList.get(i);
-
-        if(fd == temp.fd){
-            temp = call SocketList.remove(i);
-
-            // Start at last written 
-            len = temp.lastRead + 1;
-
-            avail = SOCKET_BUFFER_SIZE - len;
-
-            for(j = 0; j < bufflen; j++){
-
-                temp.sendBuff[len] = buff[j];
-                len++;
-                avail--;
-
-                // If no more spave available stop reading.
-                if(avail == 0)
-                    break;
-            }// end inner for j
-
-            temp.lastRead = len;
-
-            // Insert back into SocketList
-            call SocketList.pushback(temp);
-
-            dbg(TRANSPORT_CHANNEL,"Data read to socket %d\n",fd);
-
-            // This amount of data read
-            return j;
+    for(i = 0; i < length; i++){
+        writeSocket = call SocketList.get(i);
+        if(writeSocket.fd == fd && found == FALSE){
+            ind = i;
+            found = TRUE;
         }
     }
-    return 0;   // Failed
 
+
+    // initialize to null
+    for(i = 0; i < SOCKET_BUFFER_SIZE; i++){
+        sendMsg[i] = '\0';
+        sendUser[i] = '\0';
+    }
+    
+    if(found == FALSE)
+        return 0;
+    else{
+        writeSocket = call SocketList.get(i);
+
+        // if flag = 9 from APP get username
+        if(flag == 9){
+            // store user name
+            for(i = 0; i < bufflen; i++)
+                writeSocket.username[i] = buff[i];
+            for(i = 0; i < bufflen; i++)
+                printf("%c",buff[i]);
+            printf("\n");
+            printf("Username: %s\n",writeSocket.username);
+
+            // Update Socket List
+            while(!call SocketList.isEmpty()){
+                tempSocket = call SocketList.front();
+                if(tempSocket.fd != writeSocket.fd)
+                    call socketTemp.pushfront(call SocketList.front());
+                else
+                    call socketTemp.pushfront(writeSocket);
+                call SocketList.popfront();
+            } // end while
+            while(!call socketTemp.isEmpty()){
+                call SocketList.pushfront(call socketTemp.front());
+                call socketTemp.popfront();
+            }// end while
+            return bufflen;
+        } // end if flag = 9
+        else {
+            buffercount = 0;
+
+            if(bufflen > writeSocket.effectiveWindow)  // --------------------------  Change to old read() ? 
+                avail = writeSocket.effectiveWindow;
+            else
+                avail = bufflen;
+
+            j = writeSocket.nextExpected;
+
+            for(i = 0; i < buffEnd; i++){
+                if(buff[i] == '\n')
+                    finished = TRUE;
+                writeSocket.rcvdBuff[i] = buff[i];
+                j++;
+                buffercount++;
+
+                //update effectiveWindow
+                if(writeSocket.effectiveWindow > 0)
+                    writeSocket.effectiveWindow--;
+                else
+                    break;
+            }// end for
+            writeSocket.rcvdBuff[j] = '\0';
+            writeSocket.lastRcvd = j - 1;
+
+            if(writeSocket.effectiveWindow == 0)
+                writeSocket.nextExpected = 0;
+            else
+                writeSocket.nextExpected = j;
+
+            if(flag == 11 && finished == TRUE){
+                writeSocket.flag = 11;
+                i = 0;
+                inUse = TRUE;
+
+                while(inUse){
+                    if(writeSocket.username[i] == '\r')
+                        sendUser[i] = ':';
+                    else if(writeSocket.username[i] == '\n'){
+                        sendUser[i] = ' ';
+                        inUse = FALSE;
+                    }
+                    else
+                        sendUser[i] = writeSocket.username[i];
+                    i++;
+                }//end while
+                inUse = TRUE;
+                for(j = 0; j < 6; j++)
+                    printf("%c\n",writeSocket.rcvdBuff[j]);
+                j = 0;
+                while(inUse){
+                    if(writeSocket.rcvdBuff[i] == '\n'){
+                        sendMsg[j] = writeSocket.rcvdBuff[j];
+                        j++;
+                        i++;
+                        inUse = FALSE;
+                    }
+                    else if(writeSocket.rcvdBuff[j] == '\0')
+                        j++;
+                    else{
+                        sendMsg[j] = writeSocket.rcvdBuff[j];
+                        j++;
+                        i++;
+                    }
+                }// end while
+
+                for(i = 0; i < length; i++){
+                    writeSocket = call SocketList.get(i);
+                    for(j = 0; j < call ConfirmedList.size();j++){
+                        ls = call ConfirmedList.get(j);
+                        if(ls.node == 9){
+                            next = ls.nextHop;
+                            packet.src = TOS_NODE_ID;
+                            packet.dest = writeSocket.dest.addr;
+                            packet.protocol = 10; // PROTOCOL 10 ???
+                            packet.seq = 0;
+                            packet.TTL = MAX_TTL;
+                            memcpy(packet.payload,&sendUser,(char*)sizeof(sendUser));
+
+                            call Sender.send(packet,next);
+                            return 0;
+                            memcpy(packet.payload, &sendMsg, (char*)sizeof(sendMsg));
+                        }// end if node == 9
+                    }// end for j
+                }// end for i
+            }//end flag == 11
+            while(!call SocketList.isEmpty()){
+                tempSocket = call SocketList.front();
+                if(writeSocket.fd != tempSocket.fd)
+                    call socketTemp.pushfront(call SocketList.front());
+                else
+                    call socketTemp.pushfront(writeSocket);
+                call SocketList.popfront();
+            }// ened while
+            while(!call socketTemp.isEmpty()){
+                call SocketList.pushfront(call socketTemp.front());
+                call socketTemp.popfront();
+            }
+            return buffercount;
+        }//end else
+    }// end else
    } // End of READ
-*/
+
 
    /**
     * Attempts a connection to an address.

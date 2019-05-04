@@ -99,7 +99,7 @@ interface Transport{
     * @return uint16_t - return the amount of data you are able to read
     *    from the pass buffer. This may be shorter then bufflen
     */
-   command uint16_t read(socket_t fd, uint8_t *buff, uint16_t bufflen);
+   command uint16_t read(socket_t fd, uint8_t *buff, uint16_t bufflen, uint8_t flag);
 
    /**
     * Attempts a connection to an address.
