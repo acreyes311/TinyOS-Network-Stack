@@ -233,7 +233,7 @@ implementation{
         }
         //temp = call Socketlist.get(fd);
        temp = call Transport.getSocket(fd);
-        ind= call Transport.read(temp.fd, (uint8_t*)temp.rcvdBuff,MAX_NUM_OF_SOCKETS);
+        ind= call Transport.read(temp.fd, (uint8_t*)temp.rcvdBuff,MAX_NUM_OF_SOCKETS,1);
           dbg(TRANSPORT_CHANNEL, "buffer length: %d\n", ind);      
      }
      else{
@@ -811,6 +811,7 @@ implementation{
         i++;
       }
      }
+     dbg(TRANSPORT_CHANNEL,"setAppClient------GlobalTransfer: %d\n",globalTransfer);
 
     if(call Transport.bind(fd, &address) == SUCCESS){
         dbg(TRANSPORT_CHANNEL, "setAppClient Bind Successful\n");
@@ -1093,7 +1094,7 @@ implementation{
           //dbg(TRANSPORT_CHANNEL,"print sendbuff in clientsocket. Index %d value %d\n",i,receivedSocket->sendBuff[i]);
 
         //Read the buffer from the DATA packet.
-        call Transport.read(receivedSocket->fd,receivedSocket->sendBuff, bufferLength);
+        call Transport.read(receivedSocket->fd,receivedSocket->sendBuff, bufferLength,receivedSocket->flag);
         dbg(TRANSPORT_CHANNEL,"Finished flag4.read().\n");
 
         //update state of socket
@@ -1178,7 +1179,7 @@ implementation{
       }//end flag = 6
 
       // flag = 7 Syn packet from chat client
-      if(receivedSocket->flag == 7 && tempAddr.addr == TOS_NODE_ID){
+      if(receivedSocket->flag == 7){
         pack SYN_ACK;
         dbg(TRANSPORT_CHANNEL,"SYN from APP client received.\n");
 
@@ -1229,10 +1230,11 @@ implementation{
         call Sender.send(SYN_ACK, next);
         return;
       }// END flag = 7
-        //Flag = 8 SynAck receive and Reply
+
+       //Flag = 8 SynAck receive and Reply
       if(receivedSocket->flag == 8){
-        char transferArray [globalTransfer + 1];
-        uint16_t sz;
+        //char transferArray [globalTransfer + 1];
+        //uint16_t sz;
 
         pack SYN_RCVD;
         dbg(TRANSPORT_CHANNEL,"SYN pacet received.---flag 8\n");
@@ -1290,6 +1292,38 @@ implementation{
         }// End flag = 8
         //ACK
       if(receivedSocket->flag == 9){
+        uint8_t transferArray [globalTransfer + 1];
+        uint16_t sz;
+
+        for(i = 0; i < globalTransfer; i++){
+          transferArray[i] = i;
+        }
+        dbg(TRANSPORT_CHANNEL," ------------------- GT is:%d \n",globalTransfer);  // WHY 0 HERE?
+      dbg(TRANSPORT_CHANNEL,"Received ACK. APP 3-Way Handshake Complete!.\n");
+
+        sz = call Transport.write(tempSocket.fd,transferArray,globalTransfer,receivedSocket->flag);
+        //globalTransfer = globalTransfer - sz;
+
+        //Insert into socket list
+        while(!call Socketlist.isEmpty()){
+          tempSocket = call Socketlist.front();
+          call Socketlist.popfront();
+
+          if(tempSocket.fd == i){
+            tempSocket.state = ESTABLISHED;
+            call modSockets.pushfront(tempSocket);
+          }//end if
+          else {
+            call modSockets.pushfront(tempSocket);
+          }//end else
+        }// end While
+        
+        while(!call modSockets.isEmpty()){
+          call Socketlist.pushfront(call modSockets.front());
+          call modSockets.popfront();
+        }
+
+        return;
         //Copy from flag 4
        /*pack DATA_ACK;
         //Length of buffer same as value of lastWritten index in buffer
@@ -1353,9 +1387,8 @@ implementation{
         */
       }// flag 9
        if(receivedSocket->flag == 10){
-
+        dbg(TRANSPORT_CHANNEL,"IN FLAG 10.\n");
        }
-    
     }//end for
 
   }// End TCPProtocol

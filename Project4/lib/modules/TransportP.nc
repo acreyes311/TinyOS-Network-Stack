@@ -251,7 +251,7 @@ implementation {
         uint8_t msg[10];
         uint8_t avail, buffEnd, lastAckd, snd;  // buffer index
         socket_store_t tempSocket;
-        dbg(TRANSPORT_CHANNEL,"Node %d with flag %d, write()",TOS_NODE_ID, flag);
+        dbg(TRANSPORT_CHANNEL,"Node %d with flag %d, write()\n",TOS_NODE_ID, flag);
 
         Data.src = TOS_NODE_ID;
         Data.protocol = PROTOCOL_TCP;
@@ -271,12 +271,16 @@ implementation {
             msg[i] = temp.dest.addr;
             count++;
         }// end for
-        if(found == FALSE)
+        if(found == FALSE){
+            dbg(TRANSPORT_CHANNEL,"Write() fd not found returning 0.\n");
             return 0;
+        }
         else{
             temp = call SocketList.get(ind);
+            dbg(TRANSPORT_CHANNEL,"INSIDE write ELSE ---\n");
             // First case
             if(bufflen > 0){
+                dbg(TRANSPORT_CHANNEL,"INSIDE BUFFLEN > 0\n");
                 temp.lastWritten =  0;
                 temp.lastAck = 0;
                 temp.lastSent = 0;
@@ -288,8 +292,10 @@ implementation {
                     avail = bufflen;
 
                 buffEnd = temp.lastWritten + avail;
+
                 j = temp.lastSent;
 
+                dbg(TRANSPORT_CHANNEL,"BEFORE WRITE BUFFER\n");
                 // WRITE TO BUFFER
                 for(i = 0; i < buffEnd; i++){
                     printf("%c",buff[j]);
@@ -306,8 +312,8 @@ implementation {
                 Data.TTL = MAX_TTL;
 
                 //Distinguish between our TCP flags
-                if(flag == 8)
-                    temp.flag = 9;
+                if(flag == 9)// Our First Write
+                    temp.flag = 10;
 
                 else if(flag == 11){
                     for(i = 0; i < buffEnd; i++)
@@ -322,6 +328,8 @@ implementation {
                 // else not app data    
                 else
                     temp.flag = 0; // needed?
+
+                dbg(TRANSPORT_CHANNEL,"IN WRITE AFTER FLAG SET. FLAG IS: \n", temp.flag);    
 
                 Data.seq = i;
                 lastAckd = temp.lastAck;
