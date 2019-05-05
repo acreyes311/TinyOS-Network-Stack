@@ -13,7 +13,7 @@ interface CommandHandler{
    event void setAppClient(char* username);
       //uint8_t client,  char* username);
    event void broadcastMessage(char* username);
-   event void unicastMessage(char* dest, char* msg);
+   event void unicastMessage(char* username, char* msg);
    event void printUsers();
    
 

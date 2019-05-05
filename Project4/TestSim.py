@@ -161,8 +161,9 @@ class TestSim:
     def BroadcastMessage(self, address, message):
         self.sendCMD(self.CMD_BROADCAST_MESSAGE, address, "{0}".format(message));
 
-    def UnicastMessage(self, client, dest, msg):
-        self.sendCMD(self.CMD_UNICAST_MESSAGE, client, "{0}{1}", format(dest, msg));
+    def UnicastMessage(self, client, username, msg):
+        self.sendCMD(self.CMD_UNICAST_MESSAGE, client, "{0}{1}", format(username, msg));
+        
     def printUsers():
         self.sendCMD(self.CMD_PRINT_USERS, client, "list command");
 
@@ -213,7 +214,10 @@ def main():
     s.AppClient(2, "whehdwns\r\n");
     s.runTime(100);
 
-    s.BroadcastMessage(9, "HELLO\r\n");
+    s.BroadcastMessage(7, "HELLO Broadcast\r\n");
+    s.runTime(100);
+
+    s.UnicastMessage(5,"userUni\r\n","msgUni\r\n");
     s.runTime(100);
 
     # s.ping(4, 6, "Hi!!! 4-6");

@@ -105,7 +105,7 @@ implementation{
    uint32_t estimateRTT;
    char user[50];
    application app[20];
-
+   char globalChar[255];
    // Prototypes
    bool isKnown(pack *p);  // already seen function
    void insertPack(pack p); // push into list
@@ -542,7 +542,7 @@ implementation{
           app[myMsg->src].inuse = TRUE;
           return msg;
         }// end PROTOCOL_TCP_USER 
-        /*
+        
         else if(myMsg->protocol == PROTOCOL_TCP_MSG && myMsg->dest == TOS_NODE_ID){
           pack packet;
           int i;
@@ -597,7 +597,7 @@ implementation{
           }//end for
           return msg;
         }// End PROTOCOL_TCP_MSG
-
+        /*
         else if(myMsg->protocol == PROTOCOL_TCP_MSG_CLIENT && myMsg->dest == TOS_NODE_ID){
           int i = 0;
 
@@ -667,13 +667,7 @@ implementation{
           dest = ls.nextHop;
         }
       } 
-      
-      /*
-      makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
-      if(call tableroute.get(destination)){
-        call Sender.send(sendPackage, call tableroute.get(destination));
-      }
-  */
+
       dbg(GENERAL_CHANNEL,"PING!!! dest %d Next Hop %d \n",destination, dest);
       makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
       // Changed from BROADCAST
@@ -893,52 +887,93 @@ implementation{
    // vancu-broadcast, ayeh-message?
    event void CommandHandler.broadcastMessage(char *message){
     //socket_addr_t
-    //int i = 0;
+    LinkState dest;
     bool end = FALSE;
     pack broad;
-      char chat[25];
-     uint8_t i= 0;
-      uint8_t dest = 1;
+    char msg[25];
+    uint8_t i = 0;
+    uint8_t j;
+    uint16_t next;
 
-      while(!end){
-      if(message[i] == '\n'){
-        chat[i] =  message[i];
-        globalTransfer++;
+    // while(!end){
+    //   if(message[i] == '\n'){
+    //     msg[i] =  message[i];
+    //     globalChar[i] = message[i];
+    //     globalTransfer++;
+    //     end = TRUE;
+    //     i++;
+    //     break;
+    //   }
+    //   else{
+    //     user[i] =message[i];
+    //     globalTransfer++;
+    //     i++;
+    //   }
+    // }
+    while(!end){
+      globalChar[i] = message[i];
+      globalTransfer++;
+      msg[i] = message[i];
+
+      if(message[i] == '\n')
         end = TRUE;
-        //i++;
-      }
-      else{
-        user[i] =message[i];
-        globalTransfer++;
+      else
         i++;
+    }
+
+    broad.src = TOS_NODE_ID;
+    broad.dest = 1;
+    broad.seq = 1;
+    broad.TTL= MAX_TTL;
+    broad.protocol = PROTOCOL_TCP_MSG;
+    memcpy(broad.payload, &msg, (uint8_t)sizeof(msg));
+
+    for(j = 0; j < call Confirmed.size();j++){
+      dest = call Confirmed.get(j);
+      if (broad.dest == dest.node){
+        next = dest.nextHop;
       }
-     }
-     broad.src = TOS_NODE_ID;
-     broad.dest = 1;
-     broad.seq = 1;
-     broad.TTL= MAX_TTL;
+    } 
 
-     memcpy(broad.payload, &chat, (uint8_t)sizeof(chat));
-    dbg(TRANSPORT_CHANNEL, "Sending Broadcast Message\n");   
+    // NOT how its supposed to work.  We need to write to a socket //
 
-   }
+    dbg(TRANSPORT_CHANNEL, "Sending Broadcast Message\n");  
+    dbg(TRANSPORT_CHANNEL,"Writing Broadcast Message:\n");
+    for(i = 0; i < globalTransfer;i++)
+      printf("%c",globalChar[i]);
+    //call Transport.write()
+    call Sender.send(broad,next); // NOT WORKING *****
+    //call Sender.send(broad,AM_BROADCAST_ADDR); 
+
+   } // End broadcaseMessage()
 
    // Instead of broadcast to all clients only send to one.
    // vancu-unicast, ayeh-whisper
    event void CommandHandler.unicastMessage(char* username, char *message){
      uint8_t i =0 ;
       bool end = TRUE;
+      bool print = TRUE;
       while(end){
+        printf("%c", username[i]);
         if(username[i] =="\n"){
-          printf("%c", message[i]);
+
           end = FALSE;
+          break;
         }
-        else{
-           printf("%c", message[i]);
+        //else{
+           //printf("%c", message[i]);
            i++;
         }
-      }
+      
       printf("\n");
+      while(print){
+        printf("%c", message[i]);
+        if(message[i] == 'n'){
+          print = FALSE;
+          break;
+        }
+        i++;
+      }
    }
 
    // From client to server.
