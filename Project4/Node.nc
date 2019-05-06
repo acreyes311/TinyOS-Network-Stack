@@ -331,6 +331,7 @@ implementation{
         if(myMsg->TTL == 0 || isKnown(myMsg)){
           //return msg;
         }
+                
          // Neighbor Discovery or LSP entry
       else if(AM_BROADCAST_ADDR == myMsg->dest) {            
 
@@ -342,7 +343,8 @@ implementation{
                   insertPack(sendPackage); // Insert pack into our list
                   call Sender.send(sendPackage, myMsg->src);  // Send with pingreply protocol
                   //break;
-        }// End Prot Ping       
+        }// End Prot Ping  
+   
         else if (myMsg->protocol == PROTOCOL_PINGREPLY){
                   size = call Neighbors.size(); // get size from our List of Neighbors
                   flag = FALSE;  //  Set to true only when neighbor is found
@@ -545,9 +547,9 @@ implementation{
         
         else if(myMsg->protocol == PROTOCOL_TCP_MSG && myMsg->dest == TOS_NODE_ID){
           pack packet;
-          int i;
+          int i = 0;
           char appMsg[25];
-          dbg(TRANSPORT_CHANNEL,"Received Message from appClient: ");
+          dbg(TRANSPORT_CHANNEL,"Received Message from appClient username: ");
 
           while(TRUE){
             if(myMsg->payload[i] == '\n'){
@@ -562,7 +564,7 @@ implementation{
               i++;
             }
           }// End while
-          dbg(TRANSPORT_CHANNEL,"Message: ");
+          dbg(TRANSPORT_CHANNEL,"With Messaage: ");
           i = 0;
 
           while(TRUE){
@@ -597,7 +599,7 @@ implementation{
           }//end for
           return msg;
         }// End PROTOCOL_TCP_MSG
-        /*
+        
         else if(myMsg->protocol == PROTOCOL_TCP_MSG_CLIENT && myMsg->dest == TOS_NODE_ID){
           int i = 0;
 
@@ -617,7 +619,7 @@ implementation{
             }
           }
         }// End PROTOCOL_TCP_MSG_CLIENT
-    */
+    
          // Packet does not belong to current node 
          // Flood Packet with TTL - 1
          // broadcast to neighbors
@@ -884,7 +886,6 @@ implementation{
    // receie through injected packets.
    // Once server receives message broadcast to all connected clients
    // include initial client user in broadcast message
-   // vancu-broadcast, ayeh-message?
    event void CommandHandler.broadcastMessage(char *message){
     //socket_addr_t
     LinkState dest;
@@ -896,29 +897,26 @@ implementation{
     uint16_t next;
 
     // while(!end){
-    //   if(message[i] == '\n'){
-    //     msg[i] =  message[i];
-    //     globalChar[i] = message[i];
-    //     globalTransfer++;
-    //     end = TRUE;
-    //     i++;
-    //     break;
-    //   }
-    //   else{
-    //     user[i] =message[i];
-    //     globalTransfer++;
-    //     i++;
-    //   }
-    // }
-    while(!end){
-      globalChar[i] = message[i];
-      globalTransfer++;
-      msg[i] = message[i];
+    //   globalChar[i] = message[i];
+    //   globalTransfer++;
+    //   msg[i] = message[i];
 
-      if(message[i] == '\n')
-        end = TRUE;
-      else
+    //   if(message[i] == '\n')
+    //     end = TRUE;
+    //   else
+    //     i++;
+    // }
+
+    while(TRUE){
+      if(message[i] == '\n'){
+        msg[i] = message[i];
         i++;
+        break;
+      }
+      else{
+        msg[i] = message[i];
+        i++;
+      }
     }
 
     broad.src = TOS_NODE_ID;
@@ -937,44 +935,48 @@ implementation{
 
     // NOT how its supposed to work.  We need to write to a socket //
 
-    dbg(TRANSPORT_CHANNEL, "Sending Broadcast Message\n");  
-    dbg(TRANSPORT_CHANNEL,"Writing Broadcast Message:\n");
+    dbg(TRANSPORT_CHANNEL, "Sending Broadcast Unicast Message\n");  
+    //dbg(TRANSPORT_CHANNEL,"Writing Broadcast Message:\n");
+    //Transport.write();
     for(i = 0; i < globalTransfer;i++)
       printf("%c",globalChar[i]);
     //call Transport.write()
-    call Sender.send(broad,next); // NOT WORKING *****
+    call Sender.send(broad,1); // NOT WORKING *****
     //call Sender.send(broad,AM_BROADCAST_ADDR); 
 
    } // End broadcaseMessage()
 
    // Instead of broadcast to all clients only send to one.
-   // vancu-unicast, ayeh-whisper
    event void CommandHandler.unicastMessage(char* username, char *message){
      uint8_t i =0 ;
-      bool end = TRUE;
-      bool print = TRUE;
-      while(end){
-        printf("%c", username[i]);
+      bool end = FALSE;
+      bool print = FALSE;
+      while(!end){
+        //printf("%c", username[i]);
         if(username[i] =="\n"){
-
-          end = FALSE;
-          break;
+          printf("%c", username[i]);
+          end = TRUE;
         }
-        //else{
-           //printf("%c", message[i]);
+        else{
+           printf("%c", username[i]);
            i++;
         }
+      }
       
       printf("\n");
-      while(print){
-        printf("%c", message[i]);
-        if(message[i] == 'n'){
-          print = FALSE;
-          break;
+      while(!print){
+        
+        if(message[i] == '\n'){
+          printf("%c", message[i]);
+          print = TRUE;          
         }
-        i++;
+        else{
+          printf("%c", message[i]);
+          i++;
+        }
+        //i++;
       }
-   }
+   }// End unicastMessage
 
    // From client to server.
    // Serer replies to the client that made the request with list of users that are currently connected to server

@@ -214,11 +214,11 @@ def main():
     s.AppClient(2, "whehdwns\r\n");
     s.runTime(100);
 
-    s.BroadcastMessage(7, "HELLO Broadcast\r\n");
+    s.BroadcastMessage(2, "HELLO Broadcast\r\n");
     s.runTime(100);
 
-    s.UnicastMessage(5,"userUni\r\n","msgUni\r\n");
-    s.runTime(100);
+    #s.UnicastMessage(5,"userUni\r\n","msgUni\r\n");
+    #s.runTime(100);
 
     # s.ping(4, 6, "Hi!!! 4-6");
     # s.runTime(100);
