@@ -162,7 +162,7 @@ class TestSim:
         self.sendCMD(self.CMD_BROADCAST_MESSAGE, address, "{0}".format(message));
 
     def UnicastMessage(self, client, username, msg):
-        self.sendCMD(self.CMD_UNICAST_MESSAGE, client, "{0}{1}", format(username, msg));
+        self.sendCMD(self.CMD_UNICAST_MESSAGE, client, "{0}{1}".format(username, msg));
         
     def printUsers():
         self.sendCMD(self.CMD_PRINT_USERS, client, "list command");
