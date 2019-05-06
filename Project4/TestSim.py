@@ -187,8 +187,8 @@ def main():
     s.addChannel(s.TRANSPORT_CHANNEL); # project 3
 
     s.runTime(500);
-    s.ping(5,7,"Hello, World, 5-7");
-    s.runTime(200);
+    # s.ping(5,7,"Hello, World, 5-7");
+    # s.runTime(100);
     #s.ping(3, 9, "Hi!!! 3-9");
     #s.runTime(100);
 
@@ -213,6 +213,9 @@ def main():
 
     s.AppClient(2, "whehdwns\r\n");
     s.runTime(100);
+
+    #s.AppClient(2,"Andrew\r\n");
+    #s.runTime(100);
 
     s.BroadcastMessage(2, "HELLO Broadcast\r\n");
     s.runTime(100);

@@ -235,7 +235,7 @@ implementation{
         }
         //temp = call Socketlist.get(fd);
        temp = call Transport.getSocket(fd);
-        ind= call Transport.read(temp.fd, (uint8_t*)temp.rcvdBuff,MAX_NUM_OF_SOCKETS,1);
+        ind= call Transport.read(temp.fd, (uint8_t*)temp.rcvdBuff,MAX_NUM_OF_SOCKETS);
           dbg(TRANSPORT_CHANNEL, "buffer length: %d\n", ind);      
      }
      else{
@@ -274,7 +274,7 @@ implementation{
       if(found== TRUE){
         temp = call Socketlist.get(ind);
         while(globalTransfer > 0){
-          avail = call Transport.write(fd,0,globalTransfer,1);
+          avail = call Transport.write(fd,0,globalTransfer);
           globalTransfer = globalTransfer - avail;  // Is this done in write()?
           dbg(TRANSPORT_CHANNEL,"written Amount avail %d and globalTransfer %d\n",avail,globalTransfer);
         }//end while
@@ -603,9 +603,9 @@ implementation{
         else if(myMsg->protocol == PROTOCOL_TCP_MSG_CLIENT && myMsg->dest == TOS_NODE_ID){
           int i = 0;
 
-          dbg(TRANSPORT_CHANNEL,"Message received from server.\n");
+          dbg(TRANSPORT_CHANNEL,"Message was received from server!\n");
 
-          dbg(TRANSPORT_CHANNEL,"Message: ");
+          dbg(TRANSPORT_CHANNEL,"With Message: ");
 
           while(TRUE){
             if(myMsg->payload[i] == '\n'){              
@@ -874,7 +874,7 @@ implementation{
         i++;
       }
      }
-     dbg(TRANSPORT_CHANNEL,"setAppClient------GlobalTransfer: %d\n",globalTransfer);
+     //dbg(TRANSPORT_CHANNEL,"setAppClient------GlobalTransfer: %d\n",globalTransfer);
 
     if(call Transport.bind(fd, &address) == SUCCESS){
         dbg(TRANSPORT_CHANNEL, "setAppClient Bind Successful\n");
@@ -896,16 +896,6 @@ implementation{
     uint8_t j;
     uint16_t next;
 
-    // while(!end){
-    //   globalChar[i] = message[i];
-    //   globalTransfer++;
-    //   msg[i] = message[i];
-
-    //   if(message[i] == '\n')
-    //     end = TRUE;
-    //   else
-    //     i++;
-    // }
 
     while(TRUE){
       if(message[i] == '\n'){
@@ -933,16 +923,14 @@ implementation{
       }
     } 
 
-    // NOT how its supposed to work.  We need to write to a socket //
 
-    dbg(TRANSPORT_CHANNEL, "Sending Broadcast Unicast Message\n");  
+    dbg(TRANSPORT_CHANNEL, "Sending Broadcast Message\n");  
     //dbg(TRANSPORT_CHANNEL,"Writing Broadcast Message:\n");
-    //Transport.write();
+
     for(i = 0; i < globalTransfer;i++)
       printf("%c",globalChar[i]);
     //call Transport.write()
-    call Sender.send(broad,1); // NOT WORKING *****
-    //call Sender.send(broad,AM_BROADCAST_ADDR); 
+    call Sender.send(broad,1); 
 
    } // End broadcaseMessage()
 
@@ -1159,7 +1147,7 @@ implementation{
 
       dbg(TRANSPORT_CHANNEL,"Received ACK 3-Way Handshake Complete!.\n");
 
-        sz = call Transport.write(tempSocket.fd,transferArray,globalTransfer,receivedSocket->flag);
+        sz = call Transport.write(tempSocket.fd,transferArray,globalTransfer);
         //globalTransfer = globalTransfer - sz;
 
         //Insert into socket list
@@ -1198,7 +1186,7 @@ implementation{
           //dbg(TRANSPORT_CHANNEL,"print sendbuff in clientsocket. Index %d value %d\n",i,receivedSocket->sendBuff[i]);
 
         //Read the buffer from the DATA packet.
-        call Transport.read(receivedSocket->fd,receivedSocket->sendBuff, bufferLength,receivedSocket->flag);
+        call Transport.read(receivedSocket->fd,receivedSocket->sendBuff, bufferLength);
         dbg(TRANSPORT_CHANNEL,"Finished flag4.read().\n");
 
         //update state of socket
@@ -1406,7 +1394,7 @@ implementation{
         dbg(TRANSPORT_CHANNEL," ------------------- Flag 9 GT is:%d \n",globalTransfer);  // WHY 0 HERE?
       dbg(TRANSPORT_CHANNEL,"Received ACK. APP 3-Way Handshake Complete!.\n");
 
-        sz = call Transport.write(tempSocket.fd,transferArray,globalTransfer,receivedSocket->flag);
+        sz = call Transport.write(tempSocket.fd,transferArray,globalTransfer);
         //globalTransfer = globalTransfer - sz;
 
         //Insert into socket list
