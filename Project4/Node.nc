@@ -923,7 +923,6 @@ implementation{
       }
     } 
 
-
     dbg(TRANSPORT_CHANNEL, "Sending Broadcast Message\n");  
     //dbg(TRANSPORT_CHANNEL,"Writing Broadcast Message:\n");
 
@@ -1370,14 +1369,7 @@ implementation{
           call modSockets.popfront();
         }
          call Sender.send(SYN_RCVD, next);
-        /*
-        for(i = 0; i < globalTransfer; i++){
-          transferArray[i] = user[i];
-        }
-
-        sz = call Transport.write(tempSocket.fd,transferArray,globalTransfer, receivedSocket->flag);
-        */
-
+         dbg(TRANSPORT_CHANNEL,"Completing 3-Way Handshake.\n");
         return;
 
         }// End flag = 8
@@ -1391,7 +1383,7 @@ implementation{
         for(i = 0; i < globalTransfer; i++){
           transferArray[i] = i;
         }
-        dbg(TRANSPORT_CHANNEL," ------------------- Flag 9 GT is:%d \n",globalTransfer);  // WHY 0 HERE?
+        //dbg(TRANSPORT_CHANNEL," ------------------- Flag 9 GT is:%d \n",globalTransfer); 
       dbg(TRANSPORT_CHANNEL,"Received ACK. APP 3-Way Handshake Complete!.\n");
 
         sz = call Transport.write(tempSocket.fd,transferArray,globalTransfer);
@@ -1417,67 +1409,7 @@ implementation{
         }
 
         return;
-        //Copy from flag 4
-       /*pack DATA_ACK;
-        //Length of buffer same as value of lastWritten index in buffer
-        //uint16_t bufferLength = SOCKET_BUFFER_SIZE;
-        uint16_t bufferLength = 10;
-
-        //for(i = 0; i < bufferLength; i++)
-          //dbg(TRANSPORT_CHANNEL,"print sendbuff in clientsocket. Index %d value %d\n",i,receivedSocket->sendBuff[i]);
-
-        //Read the buffer from the DATA packet.
-        call Transport.read(receivedSocket->fd,receivedSocket->sendBuff, bufferLength);
-        dbg(TRANSPORT_CHANNEL,"Finished flag4.read().\n");
-
-        //update state of socket
-        tempSocket.flag = 10;
-        tempSocket.nextExpected = bufferLength + 1;
-
-        //Set Socket in Transport
-       // call Transport.setSocket(tempSocket.fd, tempSocket);
-
-        //Make DATA_ACK PACK
-        DATA_ACK.dest = myMsg->src;
-        DATA_ACK.src = TOS_NODE_ID;
-        DATA_ACK.seq = myMsg->seq+1;
-        DATA_ACK.TTL = myMsg->TTL;
-        DATA_ACK.protocol = PROTOCOL_TCP;
-
-        memcpy(DATA_ACK.payload, &tempSocket,(uint8_t)sizeof(tempSocket));
-      
-        dbg(TRANSPORT_CHANNEL,"DATA has been received and sending out DATA_ACK.\n");
-
-        // Get Destination
-        for(j = 0; j < call Confirmed.size();j++){
-          dest = call Confirmed.get(j);
-          if (DATA_ACK.dest == dest.node){
-            next = dest.nextHop;
-          }
-        }//end j for  
-
-        // Add to Socket List
-        while(!call Socketlist.isEmpty()){
-          tempSocket = call Socketlist.front();
-          call Socketlist.popfront();
-
-          if(tempSocket.fd == i){
-            tempSocket.lastAck = bufferLength + 1;
-            call modSockets.pushfront(tempSocket);
-          }//end if
-          else {
-            call modSockets.pushfront(tempSocket);
-          }//end else
-        }// end While
         
-        while(!call modSockets.isEmpty()){
-          call Socketlist.pushfront(call modSockets.front());
-          call modSockets.popfront();
-        }
-
-        call Sender.send(DATA_ACK, next);
-        return;
-        */
       }// flag 9
        if(receivedSocket->flag == 10){
         dbg(TRANSPORT_CHANNEL,"IN FLAG 10.\n");
